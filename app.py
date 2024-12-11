@@ -134,7 +134,7 @@ def index():
     return render_template('index.html')
 
 # Route: Analyze Speech
-@app.route('/analyze', methods=['POST'])
+@app.route('/analyze', methods=['POST' , 'GET'])
 def analyze_speech():
     if request.method == 'GET':
         return "Please use the POST method to send data"
