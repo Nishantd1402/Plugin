@@ -1,0 +1,38 @@
+# index.html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech Analysis</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Speech Analysis Tool</h1>
+        <form action="/analyze" method="post" enctype="multipart/form-data">
+            <label for="audio">Upload Audio:</label>
+            <input type="file" id="audio" name="audio" accept="audio/*" required>
+            <label for="expected_text">Expected Text:</label>
+            <textarea id="expected_text" name="expected_text" placeholder="Enter expected text here"></textarea>
+            <button type="submit">Analyze</button>
+        </form>
+        
+        {% if report %}
+        <div class="report">
+            <h2>Analysis Report</h2>
+            <p><strong>Transcription:</strong> {{ report.transcription }}</p>
+            <p><strong>Grammar Feedback:</strong> {{ report.grammar_feedback }}</p>
+            <p><strong>Pronunciation Feedback:</strong> {{ report.pronunciation_feedback }}</p>
+            <p><strong>Fluency Data:</strong></p>
+            <ul>
+                <li>Speaking Rate (WPM): {{ report.fluency_data.speaking_rate_wpm }}</li>
+                <li>Duration (seconds): {{ report.fluency_data.duration }}</li>
+                <li>Filler Words Count: {{ report.fluency_data.filler_count }}</li>
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
