@@ -136,8 +136,10 @@ def index():
 # Route: Analyze Speech
 @app.route('/analyze', methods=['POST'])
 def analyze_speech():
+    if request.method == 'GET':
+        return "Please use the POST method to send data"
     if 'audio' not in request.files:
-        return redirect(url_for('index'))
+        return "No File attached"
 
     audio_file = request.files['audio']
     expected_text = request.form.get("expected_text", "")
