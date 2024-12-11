@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask import Flask, request, jsonify, render_template, redirect, url_for , Response
 import openai
 import librosa
 from pydub import AudioSegment
@@ -191,7 +191,11 @@ def analyze_speech():
 
     # Step 5: Generate Report
     report = generate_report(transcription.text , grammer_feedback , pronunciation_feedback , fluency_data)
-    return json.dumps(transcription_with_scores)
+    # Serialize Python object to JSON string
+    json_data = json.dumps(transcription_with_scores)
+        
+        # Return Response with correct mimetype
+    return Response(json_data, mimetype='application/json')
 
 
 if __name__ == '__main__':
