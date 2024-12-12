@@ -1,5 +1,6 @@
 import os
 from flask import Flask, request, jsonify, render_template, redirect, url_for , Response
+from flask_cors import CORS
 import openai
 import librosa
 from pydub import AudioSegment
@@ -10,6 +11,7 @@ import re
 
 # Initialize Flask app
 app = Flask(__name__)
+CORS(app)
 app.config['UPLOAD_FOLDER'] = './uploads'
 
 # Configure OpenAI with Azure
