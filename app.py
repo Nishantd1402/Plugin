@@ -29,13 +29,12 @@ def get_completion( prompt):
                     {"role": "user", "content": prompt}
                 ],
                 model="llama3-70b-8192",
-                temperature=0.4  # Adjust randomness
+                temperature=0.1  # Adjust randomness
             )
             response = chat_completion.choices[0].message.content
             return response
     except Exception as e:
         # Handle exceptions and return an error message
-        print(f"Error generating chat completion: {e}")
         return "An error occurred while generating the response."
 '''
 # Function to interact with Azure OpenAI
@@ -129,11 +128,29 @@ def generate_report(transcription, grammar_feedback, pronunciation_feedback, flu
         "pronunciation_feedback": pronunciation_feedback,
         "fluency_data": fluency_data
     }
+def extract_json_from_backticks(text):
+    # Regex to capture content between triple backticks
+    pattern = r"```(.*?)```"
+    matches = re.findall(pattern, text, re.DOTALL)
+    result = jsonify(json.loads(matches[0]))
+    return result
 
 # Route: Home Page
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/prompts' , methods=['POST' , 'GET'])
+def get_prompt():
+    
+    topics = request.form.get("topics", "")
+    prompt = f"""
+    This are some topics chosen by the user - {topics}. Give 20 generated test paragraphs for communication assesment for 20 levels. 5 at easy level, 10 as medium and 5 as hard.
+    The level should grow hard on the basis of word selection, grammer used and comprehensiveness.
+    Provide the response in JSON format.
+"""
+
+    return extract_json_from_backticks(get_completion(prompt = prompt))
 
 # Route: Analyze Speech
 @app.route('/analyze', methods=['POST' , 'GET'])
@@ -185,7 +202,6 @@ def analyze_speech():
         "segments": transcription.segments,
         "x_groq": transcription.x_groq  # Retain additional metadata
     }
-    print(json.dumps(transcription_with_scores))
 
     grammer_feedback = grammar_analysis(transcription.text)
     pronunciation_feedback = pronunciation_assessment(transcription.text , transcription.text)
@@ -193,6 +209,7 @@ def analyze_speech():
 
     # Step 5: Generate Report
     report = generate_report(transcription.text , grammer_feedback , pronunciation_feedback , fluency_data)
+    transcription_with_scores['report'] = report
     # Serialize Python object to JSON string
     json_data = json.dumps(transcription_with_scores)
         
