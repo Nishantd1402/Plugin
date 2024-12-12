@@ -229,7 +229,7 @@ def analyze_speech():
     json_data = json.dumps(transcription_with_scores)
         
         # Return Response with correct mimetype
-    return Response(json_data, mimetype='application/json')
+    return jsonify(json_data)
 
 
 if __name__ == '__main__':
