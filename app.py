@@ -129,11 +129,25 @@ def generate_report(transcription, grammar_feedback, pronunciation_feedback, flu
         "fluency_data": fluency_data
     }
 def extract_json_from_backticks(text):
+    print(text)
     # Regex to capture content between triple backticks
     pattern = r"```(.*?)```"
     matches = re.findall(pattern, text, re.DOTALL)
     result = jsonify(json.loads(matches[0]))
+
+
     return result
+
+def convert_webm_to_mp3(input_path):
+    try:
+        # Load the .webm file (requires FFmpeg installed)
+        audio = AudioSegment.from_file(input_path, format="webm")
+        
+        # Export the audio as MP3
+        return audio.export(input_path, format="mp3")
+    except Exception as e:
+        print(f"Error during conversion: {e}")
+
 
 # Route: Home Page
 @app.route('/')
@@ -169,8 +183,9 @@ def analyze_speech():
     audio_path = os.path.join(app.config['UPLOAD_FOLDER'], audio_file.filename)
     audio_file.save(audio_path)
 
+    mp3_file = convert_webm_to_mp3(audio_path)
     # Convert to WAV
-    wav_file = convert_to_wav(audio_path)
+    wav_file = convert_to_wav(mp3_file)
 
     # Step 1: Transcribe audio
     transcription = transcribe_audio(audio_path)
