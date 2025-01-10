@@ -1,0 +1,38 @@
+{
+  "AI-ML": [
+    "Can you explain the difference between supervised and unsupervised learning with examples?",
+    "How would you handle an imbalanced dataset in a classification problem?",
+    "What is overfitting, and how can you prevent it?",
+    "Can you walk us through the steps of training a machine learning model?",
+    "Explain the difference between a convolutional neural network (CNN) and a recurrent neural network (RNN).",
+    "How does gradient descent work, and what are its limitations?",
+    "What is the purpose of a validation set in model training?",
+    "Describe the difference between bagging and boosting.",
+    "How would you approach feature selection in a high-dimensional dataset?",
+    "What is the difference between precision and recall, and when would you prioritize one over the other?"
+  ],
+  "System-Design": [
+    "Can you design a URL shortening service like Bitly? Describe the key components.",
+    "How would you design a distributed cache system?",
+    "Explain the architecture of a scalable chat application.",
+    "How would you design a file storage service like Google Drive or Dropbox?",
+    "What approach would you take to design a recommendation system?",
+    "Can you design a load balancer and explain how it works?",
+    "How would you design a logging and monitoring system for a large-scale application?",
+    "Explain how you would design a global content delivery network (CDN).",
+    "How would you design a video streaming service like YouTube?",
+    "What considerations would you have while designing an e-commerce platform?"
+  ],
+  "Product-Manager": [
+    "How do you prioritize features in a product roadmap?",
+    "Describe your process for gathering user feedback.",
+    "How would you handle conflicting requirements from stakeholders?",
+    "What metrics would you use to measure the success of a product?",
+    "Can you give an example of a time you had to pivot a product strategy?",
+    "How do you decide between building a new feature or improving an existing one?",
+    "What is your approach to defining a minimum viable product (MVP)?",
+    "How would you handle a situation where your team misses a product deadline?",
+    "Explain your process for working with engineering teams on a new feature.",
+    "What strategies do you use to ensure cross-functional team alignment?"
+  ]
+}
