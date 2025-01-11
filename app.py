@@ -1,4 +1,3 @@
-
 import os
 from flask import Flask, request, jsonify, render_template, redirect, url_for , Response
 from flask_cors import CORS
@@ -172,7 +171,7 @@ def transcribe_audio(filename, model="distil-whisper-large-v3-en", prompt=None, 
 
 def get_next_question(transcribed_text , prev_question , domain):
     prompt = f"""
-    Based on the user's response to the previous question in this {domain} interview, generate a new follow-up question that shifts focus to a different yet relevant topic within the field. The next question should not repeat or overly revolve around the previous discussion but instead explore a fresh area that tests the candidate's breadth of knowledge in {domain}. Ensure the question is challenging and opens up a different aspect of {domain}, moving the conversation in a new direction while still maintaining relevance to the overall interview.
+    Based on the user's response to the previous question in this {domain} interview, generate a new follow-up question that shifts focus to a different yet relevant topic within the field. The next question should not repeat or overly revolve around the previous discussion but instead explore a fresh area that tests the candidate's breadth of knowledge in AI/ML. Ensure the question is challenging and opens up a different aspect of AI/ML, moving the conversation in a new direction while still maintaining relevance to the overall interview.
     Transcribed Text: "{transcribed_text}"
     Previous Question: "{prev_question}"
     Just give the next question without any other text
@@ -262,8 +261,10 @@ def results():
             elif skill == "Problem-Solving Ability":
                 problem_solving += details['score']
 
+        
+
     # Calculate the total score average
-    average_score = round((total_score / 180) * 100 , 2)
+    average_score = round((total_score / 60) * 100 , 2)
     
     
     for i in skills:
@@ -353,186 +354,575 @@ def extract_json(input_text):
     except Exception as e:
         return f"An error occurred: {e}"
 
-async def compute_results(question, candidate_answer):
+async def compute_results(question, candidate_answer , domaim):
+    
     delimiter = "###"
-    
+            
     guidelines_product=f"""
-            Use the following parameters for evaluating the answer for the provided question:
+                Use the following parameters for evaluating the answer for the provided question:
 
-      A] General Evaluation Guidelines:
-          1. Understand the Rubrics: Assess responses against the predefined parameters specific to the Product Manager role.
-          2. Match Criteria: Align responses with the corresponding levels in the rubrics (e.g., Level 10 to Level 1) based on the quality, depth, and relevance of the answer.
-          3. Quantify Scores: Assign a score (1–10) for each parameter based on how closely the candidate’s response meets the level-specific criteria.
-          4. Provide Feedback: Justify each score with a concise explanation, citing strengths, gaps, and areas for improvement in the response.
+        A] General Evaluation Guidelines:
+            1. Understand the Rubrics: Assess responses against the predefined parameters specific to the Product Manager role.
+            2. Match Criteria: Align responses with the corresponding levels in the rubrics (e.g., Level 10 to Level 1) based on the quality, depth, and relevance of the answer.
+            3. Quantify Scores: Assign a score (1–10) for each parameter based on how closely the candidate’s response meets the level-specific criteria.
+            4. Provide Feedback: Justify each score with a concise explanation, citing strengths, gaps, and areas for improvement in the response.
 
-      B] Parameter-Specific Guidelines:
-          1. *Technical Knowledge:*
-                i) *Key Focus:* Assess depth of understanding, ability to explain concepts, and knowledge of AI/ML frameworks and algorithms.
-                ii) *Scoring Process:*
-                      a) *Level 10:* Demonstrates an in-depth mastery of technical aspects, driving product decisions aligned with both user needs and technical constraints.
-                      b) *Level 9:* Exceptionally skilled in managing cross-functional technical teams and understanding the technical feasibility of complex projects.
-                      c) *Level 8:* Strong understanding of technical concepts and processes, can lead technical teams with minimal guidance.
-                      d) *Level 7:* Proficient in making data-driven technical decisions and managing product development cycles effectively.
-                      e) *Level 6:* Solid understanding of the technical landscape, can collaborate effectively with technical teams on complex issues.
-                      f) *Level 5:* Understands basic technical requirements, but needs support to manage complex technical decisions.
-                      g) *Level 4:* Has general knowledge of technical processes, but lacks depth in implementing technical solutions.
-                      h) *Level 3:* Limited technical knowledge, relies heavily on technical teams to handle implementation details.
-                      i) *Level 2:* Basic understanding of the technical aspects, may struggle to manage technical aspects independently.
-                      j) *Level 0:* Very limited technical understanding, unable to participate in technical discussions effectively.
-                iii) *Feedback Example:*
-                      a) Level 10: “The candidate explained the technical trade-offs of the feature with clarity and accuracy.”
-                      b) Level 5: “The response was correct but lacked depth or technical details.”
-          2. *Market Understanding:*
-                i) *Key Focus:* Evaluate the candidate’s ability to identify market trends, competitive landscape, and customer needs.
-                ii) *Scoring Process:*
-                      a) *Level 10:* Deeply understands market trends, customer behavior, and competitive landscape; consistently predicts shifts in the market.
-                      b) *Level 9:* Demonstrates advanced ability to analyze market data and identify emerging trends that guide product strategy.
-                      c) *Level 8:* Strong ability to evaluate market needs and leverage insights for effective product differentiation.
-                      d) *Level 7:* Proficient in understanding customer needs and competitive landscape but may require additional analysis for future trends.
-                      e) *Level 6:* Solid understanding of the market but lacks experience in identifying disruptive trends or emerging competition.
-                      f) *Level 5:* Basic awareness of market trends and customer needs, but limited ability to assess competitive dynamics.
-                      g) *Level 4:* Minimal understanding of market trends, relies heavily on external inputs for direction.
-                      h) *Level 3:* Limited market understanding, struggles to identify opportunities for product improvement based on market trends.
-                      i) *Level 2:* Very little awareness of the market, product decisions made without a clear grasp of external factors.
-                      j) *Level 0:* No meaningful understanding of the market or competitive landscape.
-                iii) *Feedback Example:*
-                      a) Level 10: “The candidate effectively analyzed the market, identifying a key gap in competitors' offerings.”
-                      b) Level 5: “The response mentioned general trends but missed actionable insights.”
-          3. *Problem-Solving Ability:*
-                i) *Key Focus:* Assess the candidate’s ability to identify issues, propose solutions, and anticipate challenges.
-                ii) *Scoring Process:*
-                      a) *Level 10:* Exceptional at identifying root causes of complex issues and designing innovative, scalable solutions.
-                      b) *Level 9:* Skilled at finding solutions to complex problems, with an emphasis on long-term impact and business strategy.
-                      c) *Level 8:* Excellent at problem analysis and formulating actionable solutions to problems within the product lifecycle.
-                      d) *Level 7:* Consistently solves medium- to high-complexity problems with effective solutions that align with business goals.
-                      e) *Level 6:* Solves problems efficiently, although solutions may not always align perfectly with strategic objectives.
-                      f) *Level 5:* Adequately solves problems but may struggle with complex or strategic issues.
-                      g) *Level 4:* Solves basic problems but needs support when issues become more complex or strategic.
-                      h) *Level 3:* Struggles to find solutions to problems and often relies on others for problem-solving.
-                      i) *Level 2:* Rarely provides effective solutions, tends to approach problems without sufficient strategic insight.
-                      j) *Level 0:* Unable to address problems in a constructive manner, struggles to provide meaningful solutions.
-                iii) *Feedback Example:*
-                      a) Level 10: “The candidate proposed a scalable solution with clear steps for implementation.”
-                      b) Level 5: “The response addressed the problem but overlooked potential risks.”
-          4. *Communication Skills*
-                i) *Key Focus:* Assess the clarity, precision, and audience-appropriateness of explanations.
-                ii) *Scoring Process:*
-                      a) *Level 10:* Exceptionally clear communication; explains complex ideas succinctly to technical and non-technical audiences.
-                      b) *Level 9:* Very clear communication; effectively conveys ideas with minor simplifications.
-                      c) *Level 8:* Good communication; generally clear but occasionally struggles with explaining complex ideas.
-                      d) *Level 7:* Adequate communication; explains ideas well but may struggle with technical details.
-                      e) *Level 6:* Basic communication; can explain basic concepts but struggles with complex ideas.
-                      f) *Level 5:* Limited communication; frequently unclear or oversimplifies.
-                      g) *Level 4:* Poor communication; struggles to convey ideas, causing confusion.
-                      h) *Level 3:* Very poor communication; consistently unclear and difficult to understand.
-                      i) *Level 2:* Minimal communication skills; rarely conveys ideas effectively.
-                      j) *Level 0:* No communication skills; cannot articulate ideas at all.
-                iii) *Feedback Example:*
-                      a) Level 8: “The explanation of overfitting was clear but lacked examples.”
-                      b) Level 3: “The response was disorganized and difficult to follow.”
-          5. *Leadership & Collaboration*
-                i) *Key Focus:* Assess the candidate’s ability to lead teams, manage conflicts, and align diverse stakeholders.
-                ii) *Scoring Process:*
-                      a) *Level 10:* Inspires teams, creates a vision for success, drives cross-functional collaboration, and influences organizational culture.
-                      b) *Level 9:* Demonstrates exceptional leadership in driving alignment, resolving conflicts, and maintaining motivation across teams.
-                      c) *Level 8:* Effectively leads teams and maintains alignment across multiple stakeholders and departments.
-                      d) *Level 7:* Strong leadership skills, able to manage teams effectively and resolve conflicts, ensuring smooth project execution.
-                      e) *Level 6:* Good leader but occasionally struggles to keep teams aligned or handle interpersonal conflicts effectively.
-                      f) *Level 5:* Solid collaborator but may require guidance in motivating teams or resolving conflicts in a timely manner.
-                      g) *Level 4:* Limited leadership experience, often relies on others to lead or provide direction in team settings.
-                      h) *Level 3:* Struggles with leading teams and fostering collaboration across departments.
-                      i) *Level 2:* Rarely takes a leadership role, lacks experience in leading teams or motivating others.
-                      j) *Level 0:*  Does not demonstrate leadership abilities; struggles to engage or direct teams in any capacity.
-                iii) *Feedback Example:*
-                      a) Level 10: “The candidate outlined a clear plan for aligning stakeholders and ensuring team buy-in.”
-                      b) Level 5: “The response mentioned collaboration but lacked conflict resolution strategies.”
-          6. *Coherence and Cohesion*
-                i) *Key Focus:*  Evaluate the logical flow, structure, and connection of ideas within the response.
-                ii) *Scoring Process:*
-                      a) *Level 10:* Highly coherent; excellent flow between ideas. Logical progression of ideas with smooth transitions.
-                      b) *Level 9:* Very coherent; minor lapses in flow. Generally clear, with a few abrupt transitions.
-                      c) *Level 8:* Generally coherent; some choppy transitions. Ideas mostly flow well, but some sections feel disconnected.
-                      d) *Level 7:* Moderately coherent; noticeable breaks in flow. Some sections feel disconnected, requiring clarification.
-                      e) *Level 6:* Somewhat coherent; frequent breaks in flow. Readers may struggle to follow the progression of ideas.
-                      f) *Level 5:* Limited coherence; ideas often disjointed. Difficult to understand due to frequent breaks in logical progression.
-                      g) *Level 4:* Poor coherence; ideas rarely connected. Appears in random order, making the text confusing.
-                      h) *Level 3:* Very poor coherence; almost no logical flow. Text is a collection of unrelated ideas, challenging to follow.
-                      i) *Level 2:* Barely any coherence; incomprehensible flow. Text fails to form a cohesive narrative or argument.
-                      j) *Level 0:* No coherence; entirely disjointed. Text is a series of unrelated sentences with no discernible structure.
-                iii) *Feedback Example:*
-                      a) Level 10: “The response followed a clear and logical structure, making it easy to follow.”
-                      b) Level 5: “The response was generally well-organized but had minor gaps in flow.”
-      
-      C] Output Expectations
-          1. For each parameter:
-                i) Provide a numeric score (1–10).
-                ii) Include a brief rationale for the score.
-          2. Generate an overall summary highlighting:
-                i) Key strengths.
-                ii) Major gaps or areas of improvement.
-                iii) Recommendations for next steps.
-      
-      D] Evaluation Constraints
-          1. Avoid bias by focusing strictly on the content of the response.
-          2. Handle incomplete answers by scoring only the provided parts and noting gaps.
-          3. Use context provided in the question to ensure fairness and relevance.
-"""
-    
-    prompt = f"""
-    You are an AI evaluator tasked with evaluating a candidate’s answer to an product manager interview question. The evaluation involves comparing the candidate’s answer to the ideal answer based on predefined rubrics. You must assess how well the candidate’s answer aligns with the ideal answer and score it accordingly.
-
-    Inputs:
-        1. Question: {question}
-        2. Candidate's Answer: {candidate_answer}
-
-    Evaluation Process:
-          1. Analyze the candidate’s response based on the question provided.
-          2. For each parameter:
-                i) Assign a score (1–10) based on how closely the candidate’s answer aligns with the question provided.
-          3. Calculate the average score across all parameters and summarize the evaluation.
-
-    Evaluation Parameters:
-    {guidelines_product}
-
-    {delimiter}
-
-    The output must strictly follow this JSON format:
-    {{
-      "evaluation": {{
-        "criteria": {{
-          "Technical Knowledge": {{
-            "score": "score (1-10)",
-            "feedback": "feedback specific to technical knowledge"
-          }},
-          "Market Understanding": {{
-            "score": "score (1-10)",
-            "feedback": "feedback specific to Market Understanding"
-          }},
-          "Problem-Solving Ability": {{
-            "score": "score (1-10)",
-            "feedback": "feedback specific to Problem-Solving Ability"
-          }},
-          "Communication Skills": {{
-            "score": "score (1-10)",
-            "feedback": "feedback specific to communication skills"
-          }},
-          "Leadership & Collaboration": {{
-            "score": "score (1-10)",
-            "feedback": "feedback specific to Leadership & Collaboration"
-          }},
-          "Coherence and Cohesion": {{
-            "score": "score (1-10)",
-            "feedback": "feedback specific to Coherence and Cohesion"
-          }}
-        }},
-        "summary": {{
-          "strengths": "highlight key strengths",
-          "gaps": "identify gaps in the answer",
-          "areas_for_improvement": "suggest specific improvements"
-        }}
-      }}
-    }}
+        B] Parameter-Specific Guidelines:
+            1. *Technical Knowledge:*
+                    i) *Key Focus:* Assess depth of understanding, ability to explain concepts, and knowledge of AI/ML frameworks and algorithms.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Demonstrates an in-depth mastery of technical aspects, driving product decisions aligned with both user needs and technical constraints.
+                        b) *Level 9:* Exceptionally skilled in managing cross-functional technical teams and understanding the technical feasibility of complex projects.
+                        c) *Level 8:* Strong understanding of technical concepts and processes, can lead technical teams with minimal guidance.
+                        d) *Level 7:* Proficient in making data-driven technical decisions and managing product development cycles effectively.
+                        e) *Level 6:* Solid understanding of the technical landscape, can collaborate effectively with technical teams on complex issues.
+                        f) *Level 5:* Understands basic technical requirements, but needs support to manage complex technical decisions.
+                        g) *Level 4:* Has general knowledge of technical processes, but lacks depth in implementing technical solutions.
+                        h) *Level 3:* Limited technical knowledge, relies heavily on technical teams to handle implementation details.
+                        i) *Level 2:* Basic understanding of the technical aspects, may struggle to manage technical aspects independently.
+                        j) *Level 0:* Very limited technical understanding, unable to participate in technical discussions effectively.
+                    iii) *Feedback Example:*
+                        a) Level 10: “The candidate explained the technical trade-offs of the feature with clarity and accuracy.”
+                        b) Level 5: “The response was correct but lacked depth or technical details.”
+            2. *Market Understanding:*
+                    i) *Key Focus:* Evaluate the candidate’s ability to identify market trends, competitive landscape, and customer needs.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Deeply understands market trends, customer behavior, and competitive landscape; consistently predicts shifts in the market.
+                        b) *Level 9:* Demonstrates advanced ability to analyze market data and identify emerging trends that guide product strategy.
+                        c) *Level 8:* Strong ability to evaluate market needs and leverage insights for effective product differentiation.
+                        d) *Level 7:* Proficient in understanding customer needs and competitive landscape but may require additional analysis for future trends.
+                        e) *Level 6:* Solid understanding of the market but lacks experience in identifying disruptive trends or emerging competition.
+                        f) *Level 5:* Basic awareness of market trends and customer needs, but limited ability to assess competitive dynamics.
+                        g) *Level 4:* Minimal understanding of market trends, relies heavily on external inputs for direction.
+                        h) *Level 3:* Limited market understanding, struggles to identify opportunities for product improvement based on market trends.
+                        i) *Level 2:* Very little awareness of the market, product decisions made without a clear grasp of external factors.
+                        j) *Level 0:* No meaningful understanding of the market or competitive landscape.
+                    iii) *Feedback Example:*
+                        a) Level 10: “The candidate effectively analyzed the market, identifying a key gap in competitors' offerings.”
+                        b) Level 5: “The response mentioned general trends but missed actionable insights.”
+            3. *Problem-Solving Ability:*
+                    i) *Key Focus:* Assess the candidate’s ability to identify issues, propose solutions, and anticipate challenges.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Exceptional at identifying root causes of complex issues and designing innovative, scalable solutions.
+                        b) *Level 9:* Skilled at finding solutions to complex problems, with an emphasis on long-term impact and business strategy.
+                        c) *Level 8:* Excellent at problem analysis and formulating actionable solutions to problems within the product lifecycle.
+                        d) *Level 7:* Consistently solves medium- to high-complexity problems with effective solutions that align with business goals.
+                        e) *Level 6:* Solves problems efficiently, although solutions may not always align perfectly with strategic objectives.
+                        f) *Level 5:* Adequately solves problems but may struggle with complex or strategic issues.
+                        g) *Level 4:* Solves basic problems but needs support when issues become more complex or strategic.
+                        h) *Level 3:* Struggles to find solutions to problems and often relies on others for problem-solving.
+                        i) *Level 2:* Rarely provides effective solutions, tends to approach problems without sufficient strategic insight.
+                        j) *Level 0:* Unable to address problems in a constructive manner, struggles to provide meaningful solutions.
+                    iii) *Feedback Example:*
+                        a) Level 10: “The candidate proposed a scalable solution with clear steps for implementation.”
+                        b) Level 5: “The response addressed the problem but overlooked potential risks.”
+            4. *Communication Skills*
+                    i) *Key Focus:* Assess the clarity, precision, and audience-appropriateness of explanations.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Exceptionally clear communication; explains complex ideas succinctly to technical and non-technical audiences.
+                        b) *Level 9:* Very clear communication; effectively conveys ideas with minor simplifications.
+                        c) *Level 8:* Good communication; generally clear but occasionally struggles with explaining complex ideas.
+                        d) *Level 7:* Adequate communication; explains ideas well but may struggle with technical details.
+                        e) *Level 6:* Basic communication; can explain basic concepts but struggles with complex ideas.
+                        f) *Level 5:* Limited communication; frequently unclear or oversimplifies.
+                        g) *Level 4:* Poor communication; struggles to convey ideas, causing confusion.
+                        h) *Level 3:* Very poor communication; consistently unclear and difficult to understand.
+                        i) *Level 2:* Minimal communication skills; rarely conveys ideas effectively.
+                        j) *Level 0:* No communication skills; cannot articulate ideas at all.
+                    iii) *Feedback Example:*
+                        a) Level 8: “The explanation of overfitting was clear but lacked examples.”
+                        b) Level 3: “The response was disorganized and difficult to follow.”
+            5. *Leadership & Collaboration*
+                    i) *Key Focus:* Assess the candidate’s ability to lead teams, manage conflicts, and align diverse stakeholders.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Inspires teams, creates a vision for success, drives cross-functional collaboration, and influences organizational culture.
+                        b) *Level 9:* Demonstrates exceptional leadership in driving alignment, resolving conflicts, and maintaining motivation across teams.
+                        c) *Level 8:* Effectively leads teams and maintains alignment across multiple stakeholders and departments.
+                        d) *Level 7:* Strong leadership skills, able to manage teams effectively and resolve conflicts, ensuring smooth project execution.
+                        e) *Level 6:* Good leader but occasionally struggles to keep teams aligned or handle interpersonal conflicts effectively.
+                        f) *Level 5:* Solid collaborator but may require guidance in motivating teams or resolving conflicts in a timely manner.
+                        g) *Level 4:* Limited leadership experience, often relies on others to lead or provide direction in team settings.
+                        h) *Level 3:* Struggles with leading teams and fostering collaboration across departments.
+                        i) *Level 2:* Rarely takes a leadership role, lacks experience in leading teams or motivating others.
+                        j) *Level 0:*  Does not demonstrate leadership abilities; struggles to engage or direct teams in any capacity.
+                    iii) *Feedback Example:*
+                        a) Level 10: “The candidate outlined a clear plan for aligning stakeholders and ensuring team buy-in.”
+                        b) Level 5: “The response mentioned collaboration but lacked conflict resolution strategies.”
+            6. *Coherence and Cohesion*
+                    i) *Key Focus:*  Evaluate the logical flow, structure, and connection of ideas within the response.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Highly coherent; excellent flow between ideas. Logical progression of ideas with smooth transitions.
+                        b) *Level 9:* Very coherent; minor lapses in flow. Generally clear, with a few abrupt transitions.
+                        c) *Level 8:* Generally coherent; some choppy transitions. Ideas mostly flow well, but some sections feel disconnected.
+                        d) *Level 7:* Moderately coherent; noticeable breaks in flow. Some sections feel disconnected, requiring clarification.
+                        e) *Level 6:* Somewhat coherent; frequent breaks in flow. Readers may struggle to follow the progression of ideas.
+                        f) *Level 5:* Limited coherence; ideas often disjointed. Difficult to understand due to frequent breaks in logical progression.
+                        g) *Level 4:* Poor coherence; ideas rarely connected. Appears in random order, making the text confusing.
+                        h) *Level 3:* Very poor coherence; almost no logical flow. Text is a collection of unrelated ideas, challenging to follow.
+                        i) *Level 2:* Barely any coherence; incomprehensible flow. Text fails to form a cohesive narrative or argument.
+                        j) *Level 0:* No coherence; entirely disjointed. Text is a series of unrelated sentences with no discernible structure.
+                    iii) *Feedback Example:*
+                        a) Level 10: “The response followed a clear and logical structure, making it easy to follow.”
+                        b) Level 5: “The response was generally well-organized but had minor gaps in flow.”
+        
+        C] Output Expectations
+            1. For each parameter:
+                    i) Provide a numeric score (1–10).
+                    ii) Include a brief rationale for the score.
+            2. Generate an overall summary highlighting:
+                    i) Key strengths.
+                    ii) Major gaps or areas of improvement.
+                    iii) Recommendations for next steps.
+        
+        D] Evaluation Constraints
+            1. Avoid bias by focusing strictly on the content of the response.
+            2. Handle incomplete answers by scoring only the provided parts and noting gaps.
+            3. Use context provided in the question to ensure fairness and relevance.
     """
+        
+    prompt_product = f"""
+        You are an AI evaluator tasked with evaluating a candidate’s answer to an product manager interview question. The evaluation involves comparing the candidate’s answer to the ideal answer based on predefined rubrics. You must assess how well the candidate’s answer aligns with the ideal answer and score it accordingly.
+
+        Inputs:
+            1. Question: {question}
+            2. Candidate's Answer: {candidate_answer}
+
+        Evaluation Process:
+            1. Analyze the candidate’s response based on the question provided.
+            2. For each parameter:
+                    i) Assign a score (1–10) based on how closely the candidate’s answer aligns with the question provided.
+            3. Calculate the average score across all parameters and summarize the evaluation.
+
+        Evaluation Parameters:
+        {guidelines_product}
+
+        {delimiter}
+
+        The output must strictly follow this JSON format:
+        {{
+        "evaluation": {{
+            "criteria": {{
+            "Technical Knowledge": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to technical knowledge"
+            }},
+            "Market Understanding": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to Market Understanding"
+            }},
+            "Problem-Solving Ability": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to Problem-Solving Ability"
+            }},
+            "Communication Skills": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to communication skills"
+            }},
+            "Leadership & Collaboration": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to Leadership & Collaboration"
+            }},
+            "Coherence and Cohesion": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to Coherence and Cohesion"
+            }}
+            }},
+            "summary": {{
+            "strengths": "highlight key strengths",
+            "gaps": "identify gaps in the answer",
+            "areas_for_improvement": "suggest specific improvements"
+            }}
+        }}
+        }}
+        """
+
+    guidelines_aiml=f"""
+        Use the following parameters for evaluating the answer for the provided question:
+
+        A] General Evaluation Guidelines:
+            1. Understand the Rubrics: The LLM must assess responses against the predefined parameters: Technical Knowledge, Mathematical Foundations, Problem-Solving Ability, and Communication Skills.
+            2. Match Criteria: Align responses with the corresponding levels in the rubrics (e.g., Level 10 to Level 1) based on the quality, depth, and relevance of the answer.
+            3. Quantify Scores: Assign a score (1–10) for each parameter based on how closely the candidate’s response meets the level-specific criteria.
+            4. Provide Feedback: Justify each score with a concise explanation, citing strengths, gaps, and areas for improvement in the response.
+
+        B] Parameter-Specific Guidelines:
+            1. *Technical Knowledge:*
+                    i) *Key Focus:* Assess depth of understanding, ability to explain concepts, and knowledge of AI/ML frameworks and algorithms.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Deep understanding of AI/ML concepts, including advanced algorithms, frameworks, and mathematical foundations. Can explain and apply complex models effortlessly.
+                        b) *Level 9:* Strong understanding with minor gaps. Can explain most advanced concepts and demonstrate knowledge of current research trends.
+                        c) *Level 8:* Good understanding with some gaps in advanced areas. Can explain key ML algorithms and concepts but struggles with cutting-edge research.
+                        d) *Level 7:* Adequate understanding of core ML concepts. Can discuss standard algorithms like linear regression, decision trees, etc., but limited knowledge of advanced models.
+                        e) *Level 6:* Basic understanding with several gaps. Familiar with key concepts but lacks depth in understanding and application.
+                        f) *Level 5:* Limited understanding; can discuss only basic concepts. Lacks familiarity with most AI/ML frameworks and advanced topics.
+                        g) *Level 4:* Poor understanding; major gaps in basic knowledge. Unable to explain or apply fundamental algorithms.
+                        h) *Level 3:* Very poor understanding; unable to discuss basic concepts. Lacks any significant knowledge of the field.
+                        i) *Level 2:* Minimal understanding; can barely mention basic AI/ML terms. No practical or theoretical knowledge.
+                        j) *Level 0:* No understanding of AI/ML concepts. Completely unaware of foundational principles.
+                    iii) *Feedback Example:*
+                        a) Level 10: “The candidate demonstrated a deep understanding of GANs and transformers with precise explanations.”
+                        b) Level 6: “The candidate knows basic concepts but struggles with advanced models like CNNs.”
+            2. *Coherence and Cohesion:*
+                    i) *Key Focus:* Evaluate the logical flow, clarity, and structural organization of the response.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Deep understanding of AI/ML concepts, including advanced algorithms, frameworks, and mathematical foundations. Can explain and apply complex models effortlessly.
+                        b) *Level 9:* Strong understanding with minor gaps. Can explain most advanced concepts and demonstrate knowledge of current research trends.
+                        c) *Level 8:* Good understanding with some gaps in advanced areas. Can explain key ML algorithms and concepts but struggles with cutting-edge research.
+                        d) *Level 7:* Adequate understanding of core ML concepts. Can discuss standard algorithms like linear regression, decision trees, etc., but limited knowledge of advanced models.
+                        e) *Level 6:* Basic understanding with several gaps. Familiar with key concepts but lacks depth in understanding and application.
+                        f) *Level 5:* Limited understanding; can discuss only basic concepts. Lacks familiarity with most AI/ML frameworks and advanced topics.
+                        g) *Level 4:* Poor understanding; major gaps in basic knowledge. Unable to explain or apply fundamental algorithms.
+                        h) *Level 3:* Very poor understanding; unable to discuss basic concepts. Lacks any significant knowledge of the field.
+                        i) *Level 2:* Minimal understanding; can barely mention basic AI/ML terms. No practical or theoretical knowledge.
+                        j) *Level 0:* No understanding
+                    iii) *Feedback Example:*
+                        a) Level 9: “The candidate applied Bayes' theorem and matrix factorization accurately.”
+                        b) Level 4: “The explanation of gradient descent was incomplete and contained errors.”
+            3. *Problem-Solving Ability:*
+                    i) *Key Focus:* Assess how effectively the candidate formulates, analyzes, and solves problems.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Highly coherent; excellent flow between ideas. Logical progression of ideas with smooth transitions.
+                        b) *Level 9:* Very coherent; minor lapses in flow. Generally clear, with a few abrupt transitions.
+                        c) *Level 8:* Generally coherent; some choppy transitions. Ideas mostly flow well, but some sections feel disconnected.
+                        d) *Level 7:* Moderately coherent; noticeable breaks in flow. Some sections feel disconnected, requiring clarification.
+                        e) *Level 6:* Somewhat coherent; frequent breaks in flow. Readers may struggle to follow the progression of ideas.
+                        f) *Level 5:* Limited coherence; ideas often disjointed. Difficult to understand due to frequent breaks in logical progression.
+                        g) *Level 4:* Poor coherence; ideas rarely connected. Appears in random order, making the text confusing.
+                        h) *Level 3:* Very poor coherence; almost no logical flow. Text is a collection of unrelated ideas, challenging to follow.
+                        i) *Level 2:* Barely any coherence; incomprehensible flow. Text fails to form a cohesive narrative or argument.
+                        j) *Level 0:* No coherence; entirely disjointed. Text is a series of unrelated sentences with no discernible structure.
+                    iii) *Feedback Example:*
+                        a) Level 9: “The response is logically structured with clear transitions but slightly verbose.”
+                        b) Level 4: “The explanation lacked clear connections between points, making it confusing.”
+            4. *Communication Skills*
+                    i) *Key Focus:* Assess the clarity, precision, and audience-appropriateness of explanations.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Exceptionally clear communication; explains complex ideas succinctly to technical and non-technical audiences.
+                        b) *Level 9:* Very clear communication; effectively conveys ideas with minor simplifications.
+                        c) *Level 8:* Good communication; generally clear but occasionally struggles with explaining complex ideas.
+                        d) *Level 7:* Adequate communication; explains ideas well but may struggle with technical details.
+                        e) *Level 6:* Basic communication; can explain basic concepts but struggles with complex ideas.
+                        f) *Level 5:* Limited communication; frequently unclear or oversimplifies.
+                        g) *Level 4:* Poor communication; struggles to convey ideas, causing confusion.
+                        h) *Level 3:* Very poor communication; consistently unclear and difficult to understand.
+                        i) *Level 2:* Minimal communication skills; rarely conveys ideas effectively.
+                        j) *Level 0:* No communication skills; cannot articulate ideas at all.
+                    iii) *Feedback Example:*
+                        a) Level 8: “The explanation of overfitting was clear but lacked examples.”
+                        b) Level 3: “The response was disorganized and difficult to follow.”
+            5. *Ethics and Bias Awareness*
+                    i) *Key Focus:* Evaluate the candidate's ability to identify, address, and mitigate ethical concerns, biases, or unfair outcomes in AI/ML solutions.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Expert in understanding AI/ML ethics, fairness, and bias mitigation strategies. Can address issues like fairness, accountability, and transparency effectively.
+                        b) *Level 9:* Strong awareness of ethics and bias mitigation, with minor gaps in advanced topics like explainability or compliance.
+                        c) *Level 8:* Good understanding of AI/ML ethics; familiar with fairness and bias but struggles with advanced strategies.
+                        d) *Level 7:* Adequate awareness of ethical issues but lacks depth in addressing practical challenges or compliance requirements.
+                        e) *Level 6:* Basic understanding of AI/ML ethics; knows general principles but lacks practical experience.
+                        f) *Level 5:* Limited awareness of ethics; unable to identify or address key ethical concerns.
+                        g) *Level 4:* Poor understanding of AI/ML ethics; overlooks potential ethical or fairness issues.
+                        h) *Level 3:* Very poor ethics awareness; lacks understanding of the importance of fairness or accountability.
+                        i) *Level 2:* Minimal knowledge of ethics in AI/ML; can mention terms but lacks understanding.
+                        j) *Level 0:* No awareness of AI/ML ethics; completely oblivious to fairness, bias, or accountability concerns.
+                    iii) *Feedback Example:*
+                        a) Level 10: “The candidate identified multiple sources of bias, including dataset imbalance and model interpretability, and proposed robust mitigation strategies.”
+                        b) Level 6: “The candidate mentioned fairness but failed to recognize key biases in the problem.”
+                        c) Level 3: “The response lacked any consideration of ethical implications or bias mitigation.”
+            6.  Adaptability
+                    i) Key Focus: Evaluate the candidate’s ability to learn new AI/ML techniques, adapt to changing technologies, and solve novel problems.
+                    ii) Scoring Process:
+                        a) Level 10: Highly adaptable; quickly learns new concepts and applies them in practice with excellent results.
+                        b) Level 9: Very adaptable; comfortable learning new techniques and integrating them into their workflow.
+                        c) Level 8: Good adaptability; learns new techniques with some guidance and applies them effectively.
+                        d) Level 7: Adequate adaptability; struggles a bit with new technologies but eventually picks them up.
+                        e) Level 6: Basic adaptability; learns new concepts but may require significant time and effort to apply them.
+                        f) Level 5: Limited adaptability; struggles to learn and apply new techniques effectively.
+                        g) Level 4: Poor adaptability; resistant to learning new techniques and integrating them into their work.
+                        h) Level 3: Very poor adaptability; unable to learn or apply new techniques.
+                        i) Level 2: Minimal adaptability; resists learning new concepts or struggles significantly.
+                        j) Level 0: No adaptability; unable to learn or apply new concepts at all.
+                    iii) *Feedback Example:*
+                        a) Level 10: "The candidate demonstrated exceptional adaptability by quickly adjusting to new tools and frameworks, successfully implementing solutions to real-time problems during the project. They also proactively sought feedback and iterated on their approach to improve performance."
+                        b) Level 6: "The candidate showed a basic understanding of new tools and frameworks but struggled to adapt to complex challenges. While they made some adjustments, they did not fully capitalize on opportunities to improve their approach."
+                        c) Level 3: "The candidate exhibited limited adaptability, struggling to adjust to new tools or changing requirements. Their approach to solving problems remained static, even when presented with new challenges."
+
+        
+        C] Output Expectations
+            1. For each parameter:
+                    i) Provide a numeric score (1–10).
+                    ii) Include a brief rationale for the score.
+            2. Generate an overall summary highlighting:
+                    i) Key strengths.
+                    ii) Major gaps or areas of improvement.
+                    iii) Recommendations for next steps.
+        D] Evaluation Constraints
+            1. Avoid bias by focusing strictly on the content of the response.
+            2. Handle incomplete answers by scoring only the provided parts and noting gaps.
+            3. Use context provided in the question to ensure fairness and relevance.
+    """
+        
+    prompt_aiml = f"""
+        You are an AI evaluator tasked with evaluating a candidate’s answer to an AI/ML interview question. The evaluation involves comparing the candidate’s answer to the ideal answer based on predefined rubrics. You must assess how well the candidate’s answer aligns with the ideal answer and score it accordingly.
+
+        Inputs:
+            1. Question: {question}
+            2. Candidate's Answer: {candidate_answer}
+
+        Evaluation Process:
+            1. Analyze the candidate’s response based on the question provided.
+            2. For each parameter:
+                    i) Assign a score (1–10) based on how closely the candidate’s answer aligns with the question provided.
+            3. Calculate the average score across all parameters and summarize the evaluation.
+
+        Evaluation Parameters:
+        {guidelines_aiml}
+
+        {delimiter}
+
+        The output must strictly follow this JSON format:
+        {{
+        "evaluation": {{
+            "criteria": {{
+            "Technical Knowledge": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to technical knowledge"
+            }},
+            "Coherence and Cohesion": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to Coherence and Cohesion"
+            }},
+            "Problem-Solving Ability": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to problem-solving ability"
+            }},
+            "Communication Skills": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to communication skills"
+            }},
+            "Adaptability": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to Adaptability"
+            }},
+            "Ethics and Bias Awareness": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to Ethics and Bias Awareness"
+            }}
+            }},
+            "summary": {{
+            "strengths": "highlight key strengths",
+            "gaps": "identify gaps in the answer",
+            "areas_for_improvement": "suggest specific improvements"
+            }}
+        }}
+        }}
+        """
+        
+    delimiter = "###"
+        
+    guidelines_system=f"""
+        Use the following parameters for evaluating the answer for the provided question:
+
+        A] General Evaluation Guidelines:
+            1. Understand the Rubrics: Assess responses against the predefined parameters: System Architecture Design, Scalability & Performance Optimization, Distributed Systems Knowledge, Trade-Off Analysis, Communication Skills, Problem-Solving Ability and Coherence & Cohesion.
+            2. Match Criteria: Align responses with the corresponding levels in the rubrics (e.g., Level 10 to Level 1) based on the quality, depth, and relevance of the answer.
+            3. Quantify Scores: Assign a score (1–10) for each parameter based on how closely the candidate’s response meets the level-specific criteria.
+            4. Provide Feedback: Justify each score with a concise explanation, citing strengths, gaps, and areas for improvement in the response.
+
+        B] Parameter-Specific Guidelines:
+            1. *System Architecture Design:*
+                    i) *Key Focus:* Evaluate the candidate’s ability to design efficient, robust, and modular system architectures.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Designs highly scalable, fault-tolerant, and cost-efficient architectures with innovative approaches.
+                        b) *Level 9:* Demonstrates strong expertise in creating complex, distributed architectures with a clear focus on performance and scalability.
+                        c) *Level 8:* Proficient in designing robust architectures considering trade-offs between scalability, performance, and maintainability.
+                        d) *Level 7:* Creates efficient and scalable architectures for moderately complex systems with minimal guidance.
+                        e) *Level 6:* Solid understanding of architecture design principles, capable of handling standard system requirements.
+                        f) *Level 5:* Designs functional architectures for basic systems but struggles with advanced scalability or fault tolerance needs.
+                        g) *Level 4:* Limited understanding of architectural principles; designs are functional but lack scalability or robustness.
+                        h) *Level 3:* Struggles to design coherent system architectures; frequently misses critical design components.
+                        i) *Level 2:* Poor understanding of system architecture; designs lack scalability, efficiency, or fault tolerance.
+                        j) *Level 0:* Unable to design effective system architectures.
+                    iii) *Feedback Example:*
+                        a) Level 10: “The candidate designed a well-structured system with clear component interactions.”
+                        b) Level 5: “The architecture was functional but lacked modularity.”
+            2. *Scalability & Performance Optimization:*
+                    i) *Key Focus:* Assess the ability to plan for scalability, performance tuning, and handling of high-traffic scenarios.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Implements advanced optimizations to handle high-scale traffic with minimal latency and resource consumption.
+                        b) *Level 9:* Excellent in identifying bottlenecks and optimizing system performance at scale for real-world workloads.
+                        c) *Level 8:* Proficient in designing scalable systems and resolving performance issues in large, distributed environments.
+                        d) *Level 7:* Strong ability to improve system scalability and performance in moderately complex environments.
+                        e) *Level 6:* Solid understanding of scalability and performance optimization; handles common scenarios effectively.
+                        f) *Level 5:* Resolves basic scalability or performance issues but struggles with complex or high-scale challenges.
+                        g) *Level 4:* Limited ability to identify or resolve performance bottlenecks in larger systems.
+                        h) *Level 3:* Struggles with scaling systems or ensuring acceptable performance under load.
+                        i) *Level 2:* Lacks the ability to address scalability or performance challenges effectively.
+                        j) *Level 0:* Unable to identify or resolve scalability and performance issues.
+                    iii) *Feedback Example:*
+                        a) Level 10: “The response included horizontal scaling and caching strategies to optimize performance.”
+                        b) Level 5: “The scalability approach was sufficient but lacked detail in handling bottlenecks.”
+            3. *Distributed Systems Knowledge:*
+                    i) *Key Focus:* Evaluate the understanding of distributed system principles, including consistency, availability, and partitioning.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Deep understanding of distributed systems principles, able to design and optimize highly complex solutions.
+                        b) *Level 9:* Expert in distributed systems, including consensus algorithms, replication, partitioning, and sharding.
+                        c) *Level 8:* Proficient in implementing distributed system patterns like leader election, load balancing, and failover.
+                        d) *Level 7:* Strong knowledge of distributed systems and applies concepts effectively to moderately complex use cases.
+                        e) *Level 6:* Solid understanding of distributed systems; implements basic patterns like caching and replication.
+                        f) *Level 5:* Basic knowledge of distributed systems; struggles with advanced techniques like consistency or partitioning.
+                        g) *Level 4:* Limited understanding of distributed systems; solutions often miss critical elements like reliability or availability.
+                        h) *Level 3:* Struggles to apply distributed systems principles effectively; solutions often fail in high-scale scenarios.
+                        i) *Level 2:* Lacks understanding of distributed systems concepts, resulting in poor or inefficient designs.
+                        j) *Level 0:* No meaningful knowledge of distributed systems principles or techniques.
+                    iii) *Feedback Example:*
+                        a) Level 10: “The candidate leveraged eventual consistency principles effectively in the design.”
+                        b) Level 5: “The response mentioned distributed systems but lacked depth in implementation.”
+            4. *Trade-Off Analysis:*
+                    i) *Key Focus:* Assess the ability to analyze trade-offs between different design choices (e.g., cost vs. performance, consistency vs. availability).
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Consistently evaluates and justifies trade-offs in scalability, consistency, latency, and resource utilization.
+                        b) *Level 9:* Excellent ability to prioritize and explain trade-offs across multiple dimensions (e.g., CAP theorem, cost).
+                        c) *Level 8:* Proficient in analyzing trade-offs and balancing competing priorities in system design decisions.
+                        d) *Level 7:* Strong ability to consider and explain trade-offs, though may occasionally miss some minor aspects.
+                        e) *Level 6:* Solid understanding of trade-offs, capable of making informed design decisions with minor gaps.
+                        f) *Level 5:* Understands basic trade-offs but struggles with balancing multiple dimensions in complex systems.
+                        g) *Level 4:* Limited ability to analyze trade-offs; decisions often lead to suboptimal designs.
+                        h) *Level 3:* Frequently misses critical trade-offs, resulting in inefficient or unbalanced solutions.
+                        i) *Level 2:* Rarely performs meaningful trade-off analysis; decisions are often poorly justified.
+                        j) *Level 0:* Unable to identify or evaluate trade-offs, leading to flawed system designs.
+                    iii) *Feedback Example:*
+                        a) Level 10: “The candidate evaluated trade-offs between read performance and write consistency effectively.”
+                        b) Level 5: “The trade-off analysis was superficial and missed key factors.”
+            5. Communication Skills
+                    i) Key Focus: Assess the clarity, precision, and audience-appropriateness of explanations.
+                    ii) Scoring Process:
+                        a) Level 10: Exceptionally clear communication; explains complex ideas succinctly to technical and non-technical audiences.
+                        b) Level 9: Very clear communication; effectively conveys ideas with minor simplifications.
+                        c) Level 8: Good communication; generally clear but occasionally struggles with explaining complex ideas.
+                        d) Level 7: Adequate communication; explains ideas well but may struggle with technical details.
+                        e) Level 6: Basic communication; can explain basic concepts but struggles with complex ideas.
+                        f) Level 5: Limited communication; frequently unclear or oversimplifies.
+                        g) Level 4: Poor communication; struggles to convey ideas, causing confusion.
+                        h) Level 3: Very poor communication; consistently unclear and difficult to understand.
+                        i) Level 2: Minimal communication skills; rarely conveys ideas effectively.
+                        j) Level 0: No communication skills; cannot articulate ideas at all.
+                    iii) Feedback Example:
+                        a) Level 8: “The explanation of overfitting was clear but lacked examples.”
+                        b) Level 3: “The response was disorganized and difficult to follow.”
+            6. Problem-Solving Ability
+                    i) Key Focus: Evaluate the candidate’s ability to identify and resolve key challenges within the design process.
+                    ii) Scoring Process:
+                        a) Level 10: Consistently develops creative, efficient, and scalable solutions for highly complex design challenges.
+                        b) Level 9: Demonstrates excellent problem-solving ability, identifying and resolving advanced design challenges.
+                        c) Level 8: Proficient in identifying root causes and implementing practical solutions for challenging system issues.
+                        d) Level 7: Strong ability to solve moderately complex problems with a focus on clarity and efficiency.
+                        e) Level 6: Solid problem-solving skills; capable of resolving common design challenges effectively.
+                        f) Level 5: Resolves basic system challenges but struggles with moderately complex or ambiguous problems.
+                        g) Level 4: Limited ability to solve complex problems; solutions often require significant refinement.
+                        h) Level 3: Frequently struggles to develop practical or efficient solutions to system problems.
+                        i) Level 2: Rarely produces effective solutions for even basic challenges.
+                        j) Level 0: Unable to demonstrate problem-solving ability in system design contexts.
+                    iii) Feedback Example:
+                        a) Level 10: “The candidate tackled system bottlenecks with creative solutions and backed them with sound reasoning.”
+                        b) Level 5: “The problem-solving approach was adequate but lacked depth in addressing edge cases.”
+            7. *Coherence and Cohesion*
+                    i) *Key Focus:* Evaluate the logical flow, structure, and connection of ideas within the response.
+                    ii) *Scoring Process:*
+                        a) *Level 10:* Highly coherent; excellent flow between ideas. Logical progression of ideas with smooth transitions.
+                        b) *Level 9:* Very coherent; minor lapses in flow. Generally clear, with a few abrupt transitions.
+                        c) *Level 8:* Generally coherent; some choppy transitions. Ideas mostly flow well, but some sections feel disconnected.
+                        d) *Level 7:* Moderately coherent; noticeable breaks in flow. Some sections feel disconnected, requiring clarification.
+                        e) *Level 6:* Somewhat coherent; frequent breaks in flow. Readers may struggle to follow the progression of ideas.
+                        f) *Level 5:* Limited coherence; ideas often disjointed. Difficult to understand due to frequent breaks in logical progression.
+                        g) *Level 4:* Poor coherence; ideas rarely connected. Appears in random order, making the text confusing.
+                        h) *Level 3:* Very poor coherence; almost no logical flow. Text is a collection of unrelated ideas, challenging to follow.
+                        i) *Level 2:* Barely any coherence; incomprehensible flow. Text fails to form a cohesive narrative or argument.
+                        j) *Level 0:* No coherence; entirely disjointed. Text is a series of unrelated sentences with no discernible structure.
+                    iii) *Feedback Example:*
+                        a) Level 10: “The response followed a clear and logical structure, making it easy to follow.”
+                        b) Level 5: “The response was generally well-organized but had minor gaps in flow.”
+        
+        C] Output Expectations
+            1. For each parameter:
+                    i) Provide a numeric score (1–10).
+                    ii) Include a brief rationale for the score.
+            2. Generate an overall summary highlighting:
+                    i) Key strengths.
+                    ii) Major gaps or areas of improvement.
+                    iii) Recommendations for next steps.
+        
+        D] Evaluation Constraints
+            1. Avoid bias by focusing strictly on the content of the response.
+            2. Handle incomplete answers by scoring only the provided parts and noting gaps.
+            3. Use context provided in the question to ensure fairness and relevance.
+
+    """
+        
+    prompt_system = f"""
+        You are an AI evaluator tasked with evaluating a candidate’s answer to a system design interview question. The evaluation involves comparing the candidate’s answer to the ideal answer based on predefined rubrics. You must assess how well the candidate’s answer aligns with the ideal answer and score it accordingly.
+
+        Inputs:
+            1. Question: {question}
+            2. Candidate's Answer: {candidate_answer}
+
+        Evaluation Process:
+            1. Analyze the candidate’s response based on the question provided.
+            2. For each parameter:
+                    i) Assign a score (1–10) based on how closely the candidate’s answer aligns with the question provided.
+            3. Calculate the average score across all parameters and summarize the evaluation.
+
+        Evaluation Parameters:
+        {guidelines_system}
+
+        {delimiter}
+
+        The output must strictly follow this JSON format:
+        {{
+        "evaluation": {{
+            "criteria": {{
+            "System Architecture Design": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to System Architecture Design"
+            }},
+            "Scalability & Performance Optimization": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to Scalability & Performance Optimization"
+            }},
+            "Problem-Solving Ability": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to problem-solving ability"
+            }},
+            "Communication Skills": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to communication skills"
+            }},
+            "Distributed Systems Knowledge": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to Distributed Systems Knowledge"
+            }},
+            "Coherence and Cohesion": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to Coherence and Cohesion"
+            }},
+            "Trade-Off Analysis": {{
+                "score": "score (1-10)",
+                "feedback": "feedback specific to Trade-Off Analysis"
+            }}          
+            }},
+            "summary": {{
+            "strengths": "highlight key strengths",
+            "gaps": "identify gaps in the answer",
+            "areas_for_improvement": "suggest specific improvements"
+            }}
+        }}
+        }}
+        """
+    
+    if domaim == "AI-ML":
+        prompt = prompt_product
+    if domaim == "Product-Manager":
+        prompt = prompt_product
+    if domaim == "System-Design":
+        prompt = prompt_system
 
     # Generate completion
     response = get_completion(prompt)
@@ -542,7 +932,10 @@ async def compute_results(question, candidate_answer):
         save_to_session(extracted_json, question, candidate_answer)
     else:
         print("Invalid JSON extracted. Skipping save.")
+        
+
 
 if __name__ == '__main__':
     app.config['DEBUG'] = True
     app.run()
+
