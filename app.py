@@ -921,7 +921,7 @@ async def compute_results(question, candidate_answer , domaim):
         """
     
     if domaim == "AI-ML":
-        prompt = prompt_product
+        prompt = prompt_aiml
     if domaim == "Product-Manager":
         prompt = prompt_product
     else:
