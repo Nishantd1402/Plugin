@@ -169,9 +169,9 @@ def transcribe_audio(filename, model="distil-whisper-large-v3-en", prompt=None, 
         )
     return transcription
 
-def get_next_question(transcribed_text , prev_question):
+def get_next_question(transcribed_text , prev_question , domain):
     prompt = f"""
-    Based on the user's response to the previous question in this AI/ML interview, generate a new follow-up question that shifts focus to a different yet relevant topic within the field. The next question should not repeat or overly revolve around the previous discussion but instead explore a fresh area that tests the candidate's breadth of knowledge in AI/ML. Ensure the question is challenging and opens up a different aspect of AI/ML, moving the conversation in a new direction while still maintaining relevance to the overall interview.
+    Based on the user's response to the previous question in this {domain} interview, generate a new follow-up question that shifts focus to a different yet relevant topic within the field. The next question should not repeat or overly revolve around the previous discussion but instead explore a fresh area that tests the candidate's breadth of knowledge in AI/ML. Ensure the question is challenging and opens up a different aspect of AI/ML, moving the conversation in a new direction while still maintaining relevance to the overall interview.
     Transcribed Text: "{transcribed_text}"
     Previous Question: "{prev_question}"
     Just give the next question without any other text
@@ -196,6 +196,10 @@ def save_to_session(extracted_json, question, candidate_answer, session_file="ev
             with open(session_file, "r") as file:
                 session_data = json.load(file)
         except FileNotFoundError:
+            session_data = {
+                "Score": [],
+            }
+        if session_data == {}:
             session_data = {
                 "Score": [],
             }
@@ -234,9 +238,10 @@ def results():
     problem_solving = 0
     skills = {}
     
+    
     with open("evaluation_results.json" , "r") as f:
         data = json.load(f)
-        
+    
     # Process each evaluation text and extract the relevant values
     for score_text in data["Score"]:
         # Parse the JSON string
@@ -259,7 +264,12 @@ def results():
         
 
     # Calculate the total score average
-    average_score = total_score / (6 * len(data["Score"]))  # 6 criteria per evaluation
+    average_score = (total_score / 60) * 100
+    communication = (communication / 30) * 100
+    problem_solving = (problem_solving / 30) * 100
+    
+    for i in skills:
+        skills[i] = (skills[i] / 30) * 100
 
     # Output the values
     print("Total Score:", total_score)
@@ -268,6 +278,19 @@ def results():
     print("Skills and Areas for Improvement:", skills)
     print("Average Score:", average_score)
     return jsonify({"total_score" : total_score , "communication" : communication , "problem_solving" : problem_solving , "skills" : skills , "average_score" : average_score})
+
+@app.route('/clear' , methods=['GET'])
+def clearData():
+    with open("evaluation_results.json" , "w") as f:
+        default_data = {}
+        json.dump(default_data , f)
+        f.close()
+    with open("conversation.json" , "w") as f:
+        default_data = {}
+        json.dump(default_data , f)
+        f.close()
+    return jsonify({"message" : "Data Cleared"})
+        
 
 # Route: Analyze Speech
 @app.route('/analyze', methods=['POST' , 'GET'])
@@ -279,6 +302,7 @@ def analyze_speech():
 
     audio_file = request.files['audio']
     prev_question = request.form.get("previous","")
+    domain = request.form.get("domain" , "")
     # Save audio locally
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
@@ -292,7 +316,7 @@ def analyze_speech():
     # Step 1: Transcribe audio
     transcription = str(transcribe_audio(wav_file))
       # Ensure transcription is a dictionary
-    next_question = get_next_question(transcription , prev_question)
+    next_question = get_next_question(transcription , prev_question , domain)
     
     # Schedule compute_results to run in the background
     thread = threading.Thread(target=run_in_background, args=(compute_results(prev_question, transcription),))
@@ -307,6 +331,8 @@ def analyze_speech():
         file_data = {"conversation": []}
     except json.JSONDecodeError:
         # File exists but is empty or corrupt; initialize a new structure
+        file_data = {"conversation": []}
+    if file_data == {}:
         file_data = {"conversation": []}
 
     # Append new data to the conversation
