@@ -314,7 +314,7 @@ def analyze_speech():
     next_question = get_next_question(transcription , prev_question , domain)
     
     # Schedule compute_results to run in the background
-    thread = threading.Thread(target=run_in_background, args=(compute_results(prev_question, transcription),))
+    thread = threading.Thread(target=run_in_background, args=(compute_results(prev_question, transcription , domain),))
     thread.start()
     
     try:
