@@ -1,38 +1,39 @@
 {
-  "AI-ML": [
-    "Can you explain the difference between supervised and unsupervised learning with examples?",
-    "How would you handle an imbalanced dataset in a classification problem?",
-    "What is overfitting, and how can you prevent it?",
-    "Can you walk us through the steps of training a machine learning model?",
-    "Explain the difference between a convolutional neural network (CNN) and a recurrent neural network (RNN).",
-    "How does gradient descent work, and what are its limitations?",
-    "What is the purpose of a validation set in model training?",
-    "Describe the difference between bagging and boosting.",
-    "How would you approach feature selection in a high-dimensional dataset?",
-    "What is the difference between precision and recall, and when would you prioritize one over the other?"
-  ],
+"AI-ML": [
+    "You are given a dataset with a significant class imbalance. How would you handle this issue when building a machine learning model? What techniques can you use to mitigate the impact of class imbalance?",
+    "In a deep learning project, you notice that the model is overfitting on the training data. What steps would you take to reduce overfitting and improve the model's generalization?",   
+    "You are tasked with designing an AI system for a financial application. What ethical considerations should you take into account when developing the model, especially regarding fairness and bias in the predictions?",
+    " While working on a supervised learning model, you encounter a situation where there is a lot of missing data. How would you handle the missing values, and what impact would your choice have on the model's performance?",
+    " You need to deploy a machine learning model in a production environment with limited computational resources. How would you optimize your model for efficiency, both in terms of speed and memory usage?",
+    " You are building a recommendation system, and you are considering using collaborative filtering and content-based methods. How would you decide which method to use, and when might you combine the two?",
+    " Your model performs exceptionally well on the training data but performs poorly on the validation set. What could be the potential reasons for this, and how would you diagnose and fix this issue?",
+    " During a Kaggle competition, you discover that your model's performance is significantly lower than expected. You suspect that the feature engineering process might be inadequate. How would you approach improving the feature engineering for your model?",
+    " You are working on a natural language processing task, and you are dealing with noisy and unstructured text data. How would you preprocess the data to improve the performance of your model?",
+    " You are developing an AI/ML solution for an autonomous vehicle. How would you address potential safety and ethical concerns, especially in decision-making scenarios where the vehicle must choose between multiple possible outcomes?"
+]
+,
   "System-Design": [
-    "Can you design a URL shortening service like Bitly? Describe the key components.",
-    "How would you design a distributed cache system?",
-    "Explain the architecture of a scalable chat application.",
-    "How would you design a file storage service like Google Drive or Dropbox?",
-    "What approach would you take to design a recommendation system?",
-    "Can you design a load balancer and explain how it works?",
-    "How would you design a logging and monitoring system for a large-scale application?",
-    "Explain how you would design a global content delivery network (CDN).",
-    "How would you design a video streaming service like YouTube?",
-    "What considerations would you have while designing an e-commerce platform?"
+    "You are tasked with designing an e-commerce platform that can handle millions of users concurrently. The system must allow users to browse products, add them to a cart, and proceed to checkout. The platform also needs to handle large spikes in traffic during sales events.",
+    "Your company has a growing user base, and you are responsible for optimizing the performance of a social media platform that has millions of active users. The platform faces significant slowdowns when the number of concurrent users increases, especially during peak hours.",
+    "Your team is developing a real-time messaging application where messages need to be delivered instantly to users, even if some components of the system are unavailable. The system should ensure that messages are not lost and that the system remains available under failure conditions.",
+    "You are designing a cloud storage system that needs to handle large volumes of data. The system must support fast reads and writes, but at the same time, it must be cost-efficient and fault-tolerant.",
+    "You need to explain the benefits of a microservices architecture to a non-technical stakeholder who is unfamiliar with system design concepts.",
+    "You are responsible for designing a payment processing system. However, the system faces challenges with handling concurrent transactions, especially during peak shopping events. Occasionally, some transactions fail due to timeouts or duplicate processing.",
+    "You are asked to explain the process of building a recommendation engine for an online store, including how you would incorporate user preferences, previous interactions, and item characteristics to provide personalized suggestions.",
+    "You are tasked with designing a global, real-time ride-sharing platform. This system must allow users to book rides, track drivers, and handle various payment options. It needs to support users from multiple countries, each with different regulations and payment methods.",
+    "A critical application in your company has a distributed database that is showing inconsistent states due to network partitioning. Some of the nodes in the system are becoming unavailable, and the data is out of sync.",
+    "You are tasked with designing a video streaming platform that supports millions of concurrent users watching high-definition content. The platform must scale dynamically to handle large spikes in traffic without degradation in performance."
   ],
   "Product-Manager": [
-    "How do you prioritize features in a product roadmap?",
-    "Describe your process for gathering user feedback.",
-    "How would you handle conflicting requirements from stakeholders?",
-    "What metrics would you use to measure the success of a product?",
-    "Can you give an example of a time you had to pivot a product strategy?",
-    "How do you decide between building a new feature or improving an existing one?",
-    "What is your approach to defining a minimum viable product (MVP)?",
-    "How would you handle a situation where your team misses a product deadline?",
-    "Explain your process for working with engineering teams on a new feature.",
-    "What strategies do you use to ensure cross-functional team alignment?"
+    "You are working on a new AI-powered feature for our product that requires integrating a machine learning algorithm. However, the algorithm’s performance is highly dependent on the quality of the training data. How would you evaluate whether the existing data is suitable for training the model?",
+    "Our product is facing intense competition in the market. A competitor just released a feature that is very similar to what we were planning for the next quarter. How would you approach evaluating whether to go ahead with our feature or pivot?",
+    "The product launch is delayed by two weeks due to unexpected technical issues. The stakeholders are frustrated, and there is a risk of losing a major customer. How would you address the situation and get the project back on track?",
+    "You have a technical team and a non-technical team working on the same project. There is a disagreement on the feasibility of a particular feature. How would you communicate the technical constraints to the non-technical team while ensuring alignment between both sides?",
+    "You’re leading a product development team that consists of engineers, designers, and marketers. A conflict arises between the engineers and designers over how a feature should be implemented. How would you mediate the situation and ensure the team continues to work effectively?",
+    "The product roadmap has changed several times in the last month, and you need to present the new plan to the team. How would you structure your presentation to ensure all stakeholders are on the same page and understand the reasons behind the changes?",
+    "You are tasked with launching a new feature that leverages AI/ML. After reviewing the technical details, you realize that implementing the feature would be far more complex and resource-intensive than initially planned. What steps would you take to reassess and manage this feature’s development?",
+    "Your product is doing well in its core market, but you’ve identified a potential new market segment that could be a great fit for your product. How would you validate the opportunity in this new market and convince stakeholders to prioritize it?",
+    "Your product has been receiving negative feedback about a feature that was recently launched. The feedback indicates the feature is not meeting customer expectations. How would you approach resolving this issue?",
+    "You are overseeing a product that is being developed by a distributed team across different time zones. Communication breakdowns have been causing delays and confusion. How would you improve collaboration and streamline communication across the team?"
   ]
 }
