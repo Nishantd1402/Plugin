@@ -261,23 +261,16 @@ def results():
             elif skill == "Problem-Solving Ability":
                 problem_solving += details['score']
 
-        
-
     # Calculate the total score average
-    average_score = (total_score / 60) * 100
-    communication = (communication / 30) * 100
-    problem_solving = (problem_solving / 30) * 100
+    average_score = round((total_score / 60) * 100 , 2)
+    
     
     for i in skills:
-        skills[i] = (skills[i] / 30) * 100
+        skills[i] = round((skills[i] / 30) * 100 , 2)
+    communication = skills["Communication Skills"]
+    problem_solving = skills["Problem-Solving Ability"]
 
-    # Output the values
-    print("Total Score:", total_score)
-    print("Communication Score:", communication)
-    print("Problem Solving Score:", problem_solving)
-    print("Skills and Areas for Improvement:", skills)
-    print("Average Score:", average_score)
-    return jsonify({"total_score" : total_score , "communication" : communication , "problem_solving" : problem_solving , "skills" : skills , "average_score" : average_score})
+    return jsonify({"total_score" : average_score , "communication" : communication , "problem_solving" : problem_solving , "skills" : skills , "average_score" : average_score})
 
 @app.route('/clear' , methods=['GET'])
 def clearData():
