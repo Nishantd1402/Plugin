@@ -1,3 +1,4 @@
+
 import os
 from flask import Flask, request, jsonify, render_template, redirect, url_for , Response
 from flask_cors import CORS
@@ -262,7 +263,7 @@ def results():
                 problem_solving += details['score']
 
     # Calculate the total score average
-    average_score = round((total_score / 60) * 100 , 2)
+    average_score = round((total_score / 180) * 100 , 2)
     
     
     for i in skills:
