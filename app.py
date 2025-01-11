@@ -9,12 +9,113 @@ import json
 import re
 import numpy as np
 
+from flask import Flask, request, jsonify
+from flask_pymongo import PyMongo
+import jwt
+import bcrypt
+import datetime
+from bson import ObjectId
+
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
 app.config['UPLOAD_FOLDER'] = './uploads'
+app.config["MONGO_URI"] = "mongodb+srv://jainmitesh2393:rWCYwbKfmqfHo1Xx@cluster0.embny.mongodb.net/twitter?retryWrites=true&w=majority&appName=Cluster0"  # Change this to your MongoDB URI
+app.config["SECRET_KEY"] = "your_secret_key"  # Use a strong secret key
+mongo = PyMongo(app)
 
-def get_completion( prompt):
+SESSION_FILE = "evaluation_results.json"
+
+# Helper function to generate JWT token
+def generate_token(user_id):
+    payload = {
+        'user_id': str(user_id),
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)  # Token expires in 1 hour
+    }
+    token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
+    return token
+
+# Signup endpoint
+@app.route('/signup', methods=['POST'])
+def signup():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({'message': 'Username and password are required'}), 400
+
+    # Check if user already exists
+    existing_user = mongo.db.users.find_one({'username': username})
+    if existing_user:
+        return jsonify({'message': 'Username already exists'}), 400
+
+    # Hash the password before storing it
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+    # Save user to MongoDB
+    user = {
+        'username': username,
+        'password': hashed_password
+    }
+    result = mongo.db.users.insert_one(user)
+
+    return jsonify({'message': 'User created successfully'}), 201
+
+# Login endpoint
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({'message': 'Username and password are required'}), 400
+
+    # Check if user exists
+    user = mongo.db.users.find_one({'username': username})
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+
+    # Check if password is correct
+    if not bcrypt.checkpw(password.encode('utf-8'), user['password']):
+        return jsonify({'message': 'Invalid password'}), 401
+
+    # Generate JWT token
+    token = generate_token(user['_id'])
+    
+    return jsonify({'message': 'Login successful', 'token': token}), 200
+
+# Protected route to demonstrate token validation
+@app.route('/protected', methods=['GET'])
+def protected():
+    token = request.headers.get('Authorization')
+
+    if not token:
+        return jsonify({'message': 'Token is missing'}), 401
+
+    try:
+        # Remove 'Bearer ' from token if included
+        token = token.split(" ")[1]
+        
+        # Decode the JWT token
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        user_id = payload['user_id']
+
+        # You can now use user_id to fetch data from MongoDB if needed
+        user = mongo.db.users.find_one({'_id': ObjectId(user_id)})
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+
+        return jsonify({'message': 'Access granted', 'user': user['username']}), 200
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({'message': 'Token expired'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'message': 'Invalid token'}), 401
+
+# Due to difference in tempreature.
+def get_completion(prompt):
     try:
             client = Groq(api_key="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")
             # Generate the completion using the OpenAI client
@@ -30,7 +131,7 @@ def get_completion( prompt):
     except Exception as e:
         return "An error occurred while generating the response."
     
-def get_completion_0( prompt):
+def get_completion_0(prompt):
     try:
             client = Groq(api_key="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")
             # Generate the completion using the OpenAI client
@@ -84,6 +185,30 @@ def convert_webm_to_mp3(input_path):
         return audio.export(input_path, format="mp3")
     except Exception as e:
         print(f"Error during conversion: {e}")
+        
+def save_to_session(extracted_json, question, candidate_answer, session_file="evaluation_results.json"):
+    try:
+        # Load existing data if the file exists
+        session_data = {}
+        try:
+            with open(session_file, "r") as file:
+                session_data = json.load(file)
+        except FileNotFoundError:
+            session_data = {
+                "Score": [],
+            }
+
+        # Append extracted JSON to the Score section
+        session_data["Score"].append(extracted_json)
+
+        # Save updated data back to the file
+        with open(session_file, "w") as file:
+            json.dump(session_data, file, indent=4)
+        print("Data saved successfully to", session_file)
+
+    except Exception as e:
+        print(f"Error saving to session: {e}")
+
 
 
 # Route: Home Page
@@ -94,14 +219,54 @@ def index():
 @app.route('/FirstQuestion' , methods=['POST' , 'GET'])
 def first_question():
     domain = request.form.get("domain" , "")
-    print(domain)
     num = np.random.randint(0,9)
     with open('firstQuestion.json', 'r') as file:
         data = json.load(file)
     
     question = data[domain][num]
-    print(get_next_question("i dont know" , "How do you think the concept of explainability in machine learning models can be balanced with the need for model complexity and accuracy, especially in high-stakes applications such as healthcare or finance?"))
     return jsonify(question)
+
+@app.route('/results' , methods=['GET'])
+def results():
+    total_score = 0
+    communication = 0
+    problem_solving = 0
+    skills = {}
+    
+    with open("evaluation_results.json" , "r") as f:
+        data = json.load(f)
+        
+    # Process each evaluation text and extract the relevant values
+    for score_text in data["Score"]:
+        # Parse the JSON string
+        evaluation = json.loads(score_text)
+        
+        # Extract the scores for relevant categories
+        for skill, details in evaluation['evaluation']['criteria'].items():
+            if skill not in skills:
+                skills[skill] = 0  # Initialize the skill in the dictionary if not already present
+            skills[skill] += details['score']  # Add the score to the existing skill score
+            
+            total_score += details['score']  # Add the score to the total score
+            
+            # For communication and problem-solving scores
+            if skill == "Communication Skills":
+                communication += details['score']
+            elif skill == "Problem-Solving Ability":
+                problem_solving += details['score']
+
+        
+
+    # Calculate the total score average
+    average_score = total_score / (6 * len(data["Score"]))  # 6 criteria per evaluation
+
+    # Output the values
+    print("Total Score:", total_score)
+    print("Communication Score:", communication)
+    print("Problem Solving Score:", problem_solving)
+    print("Skills and Areas for Improvement:", skills)
+    print("Average Score:", average_score)
+    return jsonify({"total_score" : total_score , "communication" : communication , "problem_solving" : problem_solving , "skills" : skills , "average_score" : average_score})
 
 # Route: Analyze Speech
 @app.route('/analyze', methods=['POST' , 'GET'])
@@ -124,10 +289,33 @@ def analyze_speech():
     wav_file = convert_to_wav(mp3_file)
 
     # Step 1: Transcribe audio
-    transcription = transcribe_audio(wav_file)
+    transcription = str(transcribe_audio(wav_file))
       # Ensure transcription is a dictionary
     next_question = get_next_question(transcription , prev_question)
-    results = compute_results(prev_question,transcription)
+    score = compute_results(prev_question,transcription)
+    
+    try:
+        # Load existing data
+        with open("conversation.json", "r") as f:
+            file_data = json.load(f)
+    except FileNotFoundError:
+        # File doesn't exist; initialize a new structure
+        file_data = {"conversation": []}
+    except json.JSONDecodeError:
+        # File exists but is empty or corrupt; initialize a new structure
+        file_data = {"conversation": []}
+
+    # Append new data to the conversation
+    new_data = {
+        "question": prev_question,
+        "answer": transcription,
+    }
+
+    file_data["conversation"].append(new_data)
+
+    # Save updated data back to the file
+    with open("conversation.json", "w") as f:
+        json.dump(file_data, f, indent=4)
     return jsonify(next_question)
 
 def extract_json(input_text):
@@ -143,54 +331,114 @@ def extract_json(input_text):
 
 def compute_results(question, candidate_answer):
     delimiter = "###"
-    guidelines=f"""
-      Use the following parameters for evaluating the answer for the provided question:
+    
+    guidelines_product=f"""
+            Use the following parameters for evaluating the answer for the provided question:
 
       A] General Evaluation Guidelines:
-          1. Understand the Rubrics: The LLM must assess responses against the predefined parameters: Technical Knowledge, Mathematical Foundations, Problem-Solving Ability, and Communication Skills.
+          1. Understand the Rubrics: Assess responses against the predefined parameters specific to the Product Manager role.
           2. Match Criteria: Align responses with the corresponding levels in the rubrics (e.g., Level 10 to Level 1) based on the quality, depth, and relevance of the answer.
           3. Quantify Scores: Assign a score (1–10) for each parameter based on how closely the candidate’s response meets the level-specific criteria.
           4. Provide Feedback: Justify each score with a concise explanation, citing strengths, gaps, and areas for improvement in the response.
 
-
       B] Parameter-Specific Guidelines:
-          1. Technical Knowledge:
-                i) Key Focus: Assess depth of understanding, ability to explain concepts, and knowledge of AI/ML frameworks and algorithms.
-                ii) Scoring Process:
-                      a) Analyze whether the candidate discusses foundational, intermediate, or advanced concepts.
-                      b) Evaluate clarity, correctness, and ability to apply the knowledge practically.
-                      c) Consider whether the candidate mentions cutting-edge topics or research trends.
-                iii) Feedback Example:
-                      a) Level 10: “The candidate demonstrated a deep understanding of GANs and transformers with precise explanations.”
-                      b) Level 6: “The candidate knows basic concepts but struggles with advanced models like CNNs.”
-          2. Mathematical Foundations
-                i) Key Focus: Evaluate proficiency in applying linear algebra, calculus, probability, and statistics to AI/ML tasks.
-                ii) Scoring Process:
-                      a) Identify mathematical techniques referenced in responses and their accuracy.
-                      b) Check for errors in understanding or application of mathematical concepts.
-                      c) Assess whether the candidate integrates theory into practical AI/ML scenarios.
-                iii) Feedback Example:
-                      a) Level 9: “The candidate applied Bayes' theorem and matrix factorization accurately.”
-                      b) Level 4: “The explanation of gradient descent was incomplete and contained errors.”
-          3. Problem-Solving Ability
-                i) Key Focus: Assess how effectively the candidate formulates, analyzes, and solves problems.
-                ii) Scoring Process:
-                      a) Review the approach for logical structure, innovation, and efficiency.
-                      b) Check for the ability to solve standard and novel problems independently.
-                      c) Evaluate whether the solution is practical and relevant.
-                iii) Feedback Example:
-                      a) Level 10: “Provided an optimal solution with an innovative use of reinforcement learning.”
-                      b) Level 5: “Attempted the problem but required significant guidance to reach a partial solution.”
-          4. Communication Skills
-                i) Key Focus: Assess the clarity, precision, and audience-appropriateness of explanations.
-                ii) Scoring Process:
-                      a) Determine how effectively the candidate explains concepts and ideas.
-                      b) Identify any oversimplifications or unnecessary technical jargon.
-                      c) Evaluate whether explanations are audience-appropriate (technical or non-technical).
-                iii) Feedback Example:
+          1. *Technical Knowledge:*
+                i) *Key Focus:* Assess depth of understanding, ability to explain concepts, and knowledge of AI/ML frameworks and algorithms.
+                ii) *Scoring Process:*
+                      a) *Level 10:* Demonstrates an in-depth mastery of technical aspects, driving product decisions aligned with both user needs and technical constraints.
+                      b) *Level 9:* Exceptionally skilled in managing cross-functional technical teams and understanding the technical feasibility of complex projects.
+                      c) *Level 8:* Strong understanding of technical concepts and processes, can lead technical teams with minimal guidance.
+                      d) *Level 7:* Proficient in making data-driven technical decisions and managing product development cycles effectively.
+                      e) *Level 6:* Solid understanding of the technical landscape, can collaborate effectively with technical teams on complex issues.
+                      f) *Level 5:* Understands basic technical requirements, but needs support to manage complex technical decisions.
+                      g) *Level 4:* Has general knowledge of technical processes, but lacks depth in implementing technical solutions.
+                      h) *Level 3:* Limited technical knowledge, relies heavily on technical teams to handle implementation details.
+                      i) *Level 2:* Basic understanding of the technical aspects, may struggle to manage technical aspects independently.
+                      j) *Level 0:* Very limited technical understanding, unable to participate in technical discussions effectively.
+                iii) *Feedback Example:*
+                      a) Level 10: “The candidate explained the technical trade-offs of the feature with clarity and accuracy.”
+                      b) Level 5: “The response was correct but lacked depth or technical details.”
+          2. *Market Understanding:*
+                i) *Key Focus:* Evaluate the candidate’s ability to identify market trends, competitive landscape, and customer needs.
+                ii) *Scoring Process:*
+                      a) *Level 10:* Deeply understands market trends, customer behavior, and competitive landscape; consistently predicts shifts in the market.
+                      b) *Level 9:* Demonstrates advanced ability to analyze market data and identify emerging trends that guide product strategy.
+                      c) *Level 8:* Strong ability to evaluate market needs and leverage insights for effective product differentiation.
+                      d) *Level 7:* Proficient in understanding customer needs and competitive landscape but may require additional analysis for future trends.
+                      e) *Level 6:* Solid understanding of the market but lacks experience in identifying disruptive trends or emerging competition.
+                      f) *Level 5:* Basic awareness of market trends and customer needs, but limited ability to assess competitive dynamics.
+                      g) *Level 4:* Minimal understanding of market trends, relies heavily on external inputs for direction.
+                      h) *Level 3:* Limited market understanding, struggles to identify opportunities for product improvement based on market trends.
+                      i) *Level 2:* Very little awareness of the market, product decisions made without a clear grasp of external factors.
+                      j) *Level 0:* No meaningful understanding of the market or competitive landscape.
+                iii) *Feedback Example:*
+                      a) Level 10: “The candidate effectively analyzed the market, identifying a key gap in competitors' offerings.”
+                      b) Level 5: “The response mentioned general trends but missed actionable insights.”
+          3. *Problem-Solving Ability:*
+                i) *Key Focus:* Assess the candidate’s ability to identify issues, propose solutions, and anticipate challenges.
+                ii) *Scoring Process:*
+                      a) *Level 10:* Exceptional at identifying root causes of complex issues and designing innovative, scalable solutions.
+                      b) *Level 9:* Skilled at finding solutions to complex problems, with an emphasis on long-term impact and business strategy.
+                      c) *Level 8:* Excellent at problem analysis and formulating actionable solutions to problems within the product lifecycle.
+                      d) *Level 7:* Consistently solves medium- to high-complexity problems with effective solutions that align with business goals.
+                      e) *Level 6:* Solves problems efficiently, although solutions may not always align perfectly with strategic objectives.
+                      f) *Level 5:* Adequately solves problems but may struggle with complex or strategic issues.
+                      g) *Level 4:* Solves basic problems but needs support when issues become more complex or strategic.
+                      h) *Level 3:* Struggles to find solutions to problems and often relies on others for problem-solving.
+                      i) *Level 2:* Rarely provides effective solutions, tends to approach problems without sufficient strategic insight.
+                      j) *Level 0:* Unable to address problems in a constructive manner, struggles to provide meaningful solutions.
+                iii) *Feedback Example:*
+                      a) Level 10: “The candidate proposed a scalable solution with clear steps for implementation.”
+                      b) Level 5: “The response addressed the problem but overlooked potential risks.”
+          4. *Communication Skills*
+                i) *Key Focus:* Assess the clarity, precision, and audience-appropriateness of explanations.
+                ii) *Scoring Process:*
+                      a) *Level 10:* Exceptionally clear communication; explains complex ideas succinctly to technical and non-technical audiences.
+                      b) *Level 9:* Very clear communication; effectively conveys ideas with minor simplifications.
+                      c) *Level 8:* Good communication; generally clear but occasionally struggles with explaining complex ideas.
+                      d) *Level 7:* Adequate communication; explains ideas well but may struggle with technical details.
+                      e) *Level 6:* Basic communication; can explain basic concepts but struggles with complex ideas.
+                      f) *Level 5:* Limited communication; frequently unclear or oversimplifies.
+                      g) *Level 4:* Poor communication; struggles to convey ideas, causing confusion.
+                      h) *Level 3:* Very poor communication; consistently unclear and difficult to understand.
+                      i) *Level 2:* Minimal communication skills; rarely conveys ideas effectively.
+                      j) *Level 0:* No communication skills; cannot articulate ideas at all.
+                iii) *Feedback Example:*
                       a) Level 8: “The explanation of overfitting was clear but lacked examples.”
                       b) Level 3: “The response was disorganized and difficult to follow.”
-
+          5. *Leadership & Collaboration*
+                i) *Key Focus:* Assess the candidate’s ability to lead teams, manage conflicts, and align diverse stakeholders.
+                ii) *Scoring Process:*
+                      a) *Level 10:* Inspires teams, creates a vision for success, drives cross-functional collaboration, and influences organizational culture.
+                      b) *Level 9:* Demonstrates exceptional leadership in driving alignment, resolving conflicts, and maintaining motivation across teams.
+                      c) *Level 8:* Effectively leads teams and maintains alignment across multiple stakeholders and departments.
+                      d) *Level 7:* Strong leadership skills, able to manage teams effectively and resolve conflicts, ensuring smooth project execution.
+                      e) *Level 6:* Good leader but occasionally struggles to keep teams aligned or handle interpersonal conflicts effectively.
+                      f) *Level 5:* Solid collaborator but may require guidance in motivating teams or resolving conflicts in a timely manner.
+                      g) *Level 4:* Limited leadership experience, often relies on others to lead or provide direction in team settings.
+                      h) *Level 3:* Struggles with leading teams and fostering collaboration across departments.
+                      i) *Level 2:* Rarely takes a leadership role, lacks experience in leading teams or motivating others.
+                      j) *Level 0:*  Does not demonstrate leadership abilities; struggles to engage or direct teams in any capacity.
+                iii) *Feedback Example:*
+                      a) Level 10: “The candidate outlined a clear plan for aligning stakeholders and ensuring team buy-in.”
+                      b) Level 5: “The response mentioned collaboration but lacked conflict resolution strategies.”
+          6. *Coherence and Cohesion*
+                i) *Key Focus:*  Evaluate the logical flow, structure, and connection of ideas within the response.
+                ii) *Scoring Process:*
+                      a) *Level 10:* Highly coherent; excellent flow between ideas. Logical progression of ideas with smooth transitions.
+                      b) *Level 9:* Very coherent; minor lapses in flow. Generally clear, with a few abrupt transitions.
+                      c) *Level 8:* Generally coherent; some choppy transitions. Ideas mostly flow well, but some sections feel disconnected.
+                      d) *Level 7:* Moderately coherent; noticeable breaks in flow. Some sections feel disconnected, requiring clarification.
+                      e) *Level 6:* Somewhat coherent; frequent breaks in flow. Readers may struggle to follow the progression of ideas.
+                      f) *Level 5:* Limited coherence; ideas often disjointed. Difficult to understand due to frequent breaks in logical progression.
+                      g) *Level 4:* Poor coherence; ideas rarely connected. Appears in random order, making the text confusing.
+                      h) *Level 3:* Very poor coherence; almost no logical flow. Text is a collection of unrelated ideas, challenging to follow.
+                      i) *Level 2:* Barely any coherence; incomprehensible flow. Text fails to form a cohesive narrative or argument.
+                      j) *Level 0:* No coherence; entirely disjointed. Text is a series of unrelated sentences with no discernible structure.
+                iii) *Feedback Example:*
+                      a) Level 10: “The response followed a clear and logical structure, making it easy to follow.”
+                      b) Level 5: “The response was generally well-organized but had minor gaps in flow.”
+      
       C] Output Expectations
           1. For each parameter:
                 i) Provide a numeric score (1–10).
@@ -199,6 +447,7 @@ def compute_results(question, candidate_answer):
                 i) Key strengths.
                 ii) Major gaps or areas of improvement.
                 iii) Recommendations for next steps.
+      
       D] Evaluation Constraints
           1. Avoid bias by focusing strictly on the content of the response.
           2. Handle incomplete answers by scoring only the provided parts and noting gaps.
@@ -206,7 +455,7 @@ def compute_results(question, candidate_answer):
 """
     
     prompt = f"""
-    You are an AI evaluator tasked with evaluating a candidate’s answer to an AI/ML interview question. The evaluation involves comparing the candidate’s answer to the ideal answer based on predefined rubrics. You must assess how well the candidate’s answer aligns with the ideal answer and score it accordingly.
+    You are an AI evaluator tasked with evaluating a candidate’s answer to an product manager interview question. The evaluation involves comparing the candidate’s answer to the ideal answer based on predefined rubrics. You must assess how well the candidate’s answer aligns with the ideal answer and score it accordingly.
 
     Inputs:
         1. Question: {question}
@@ -219,7 +468,7 @@ def compute_results(question, candidate_answer):
           3. Calculate the average score across all parameters and summarize the evaluation.
 
     Evaluation Parameters:
-    {guidelines}
+    {guidelines_product}
 
     {delimiter}
 
@@ -231,17 +480,25 @@ def compute_results(question, candidate_answer):
             "score": "score (1-10)",
             "feedback": "feedback specific to technical knowledge"
           }},
-          "Mathematical Foundations": {{
+          "Market Understanding": {{
             "score": "score (1-10)",
-            "feedback": "feedback specific to mathematical foundations"
+            "feedback": "feedback specific to Market Understanding"
           }},
           "Problem-Solving Ability": {{
             "score": "score (1-10)",
-            "feedback": "feedback specific to problem-solving ability"
+            "feedback": "feedback specific to Problem-Solving Ability"
           }},
           "Communication Skills": {{
             "score": "score (1-10)",
             "feedback": "feedback specific to communication skills"
+          }},
+          "Leadership & Collaboration": {{
+            "score": "score (1-10)",
+            "feedback": "feedback specific to Leadership & Collaboration"
+          }},
+          "Coherence and Cohesion": {{
+            "score": "score (1-10)",
+            "feedback": "feedback specific to Coherence and Cohesion"
           }}
         }},
         "summary": {{
@@ -256,8 +513,12 @@ def compute_results(question, candidate_answer):
     # Generate completion
     response = get_completion(prompt)
     extracted_json = extract_json(response)
-    print(extracted_json) 
-    return extracted_json
+    if isinstance(extracted_json, str) and "{" in extracted_json:
+        # Save only if valid JSON is extracted
+        save_to_session(extracted_json, question, candidate_answer)
+    else:
+        print("Invalid JSON extracted. Skipping save.")
+    print(extracted_json)
 
 if __name__ == '__main__':
     app.config['DEBUG'] = True
