@@ -1,118 +1,110 @@
 import os
 from flask import Flask, request, jsonify, render_template, redirect, url_for , Response
 from flask_cors import CORS
-import openai
-import librosa
 from pydub import AudioSegment
 from groq import Groq
 import json
-import re
 import numpy as np
-
 from flask import Flask, request, jsonify
-from flask_pymongo import PyMongo
-import jwt
-import bcrypt
-import datetime
-from bson import ObjectId
+
 
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)
 app.config['UPLOAD_FOLDER'] = './uploads'
-app.config["MONGO_URI"] = "mongodb+srv://jainmitesh2393:rWCYwbKfmqfHo1Xx@cluster0.embny.mongodb.net/twitter?retryWrites=true&w=majority&appName=Cluster0"  # Change this to your MongoDB URI
-app.config["SECRET_KEY"] = "your_secret_key"  # Use a strong secret key
-mongo = PyMongo(app)
+# app.config["MONGO_URI"] = "mongodb+srv://jainmitesh2393:rWCYwbKfmqfHo1Xx@cluster0.embny.mongodb.net/twitter?retryWrites=true&w=majority&appName=Cluster0"  # Change this to your MongoDB URI
+# app.config["SECRET_KEY"] = "your_secret_key"  # Use a strong secret key
+# mongo = PyMongo(app)
 
-SESSION_FILE = "evaluation_results.json"
+# SESSION_FILE = "evaluation_results.json"
 
-# Helper function to generate JWT token
-def generate_token(user_id):
-    payload = {
-        'user_id': str(user_id),
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)  # Token expires in 1 hour
-    }
-    token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
-    return token
+# # Helper function to generate JWT token
+# def generate_token(user_id):
+#     payload = {
+#         'user_id': str(user_id),
+#         'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)  # Token expires in 1 hour
+#     }
+#     token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
+#     return token
 
-# Signup endpoint
-@app.route('/signup', methods=['POST'])
-def signup():
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
+# # Signup endpoint
+# @app.route('/signup', methods=['POST'])
+# def signup():
+#     data = request.get_json()
+#     username = data.get('username')
+#     password = data.get('password')
 
-    if not username or not password:
-        return jsonify({'message': 'Username and password are required'}), 400
+#     if not username or not password:
+#         return jsonify({'message': 'Username and password are required'}), 400
 
-    # Check if user already exists
-    existing_user = mongo.db.users.find_one({'username': username})
-    if existing_user:
-        return jsonify({'message': 'Username already exists'}), 400
+#     # Check if user already exists
+#     existing_user = mongo.db.users.find_one({'username': username})
+#     if existing_user:
+#         return jsonify({'message': 'Username already exists'}), 400
 
-    # Hash the password before storing it
-    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+#     # Hash the password before storing it
+#     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
-    # Save user to MongoDB
-    user = {
-        'username': username,
-        'password': hashed_password
-    }
-    result = mongo.db.users.insert_one(user)
+#     # Save user to MongoDB
+#     user = {
+#         'username': username,
+#         'password': hashed_password
+#     }
+#     result = mongo.db.users.insert_one(user)
 
-    return jsonify({'message': 'User created successfully'}), 201
+#     return jsonify({'message': 'User created successfully'}), 201
 
-# Login endpoint
-@app.route('/login', methods=['POST'])
-def login():
-    data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
+# # Login endpoint
+# @app.route('/login', methods=['POST'])
+# def login():
+#     data = request.get_json()
+#     username = data.get('username')
+#     password = data.get('password')
 
-    if not username or not password:
-        return jsonify({'message': 'Username and password are required'}), 400
+#     if not username or not password:
+#         return jsonify({'message': 'Username and password are required'}), 400
 
-    # Check if user exists
-    user = mongo.db.users.find_one({'username': username})
-    if not user:
-        return jsonify({'message': 'User not found'}), 404
+#     # Check if user exists
+#     user = mongo.db.users.find_one({'username': username})
+#     if not user:
+#         return jsonify({'message': 'User not found'}), 404
 
-    # Check if password is correct
-    if not bcrypt.checkpw(password.encode('utf-8'), user['password']):
-        return jsonify({'message': 'Invalid password'}), 401
+#     # Check if password is correct
+#     if not bcrypt.checkpw(password.encode('utf-8'), user['password']):
+#         return jsonify({'message': 'Invalid password'}), 401
 
-    # Generate JWT token
-    token = generate_token(user['_id'])
+#     # Generate JWT token
+#     token = generate_token(user['_id'])
     
-    return jsonify({'message': 'Login successful', 'token': token}), 200
+#     return jsonify({'message': 'Login successful', 'token': token}), 200
 
-# Protected route to demonstrate token validation
-@app.route('/protected', methods=['GET'])
-def protected():
-    token = request.headers.get('Authorization')
+# # Protected route to demonstrate token validation
+# @app.route('/protected', methods=['GET'])
+# def protected():
+#     token = request.headers.get('Authorization')
 
-    if not token:
-        return jsonify({'message': 'Token is missing'}), 401
+#     if not token:
+#         return jsonify({'message': 'Token is missing'}), 401
 
-    try:
-        # Remove 'Bearer ' from token if included
-        token = token.split(" ")[1]
+#     try:
+#         # Remove 'Bearer ' from token if included
+#         token = token.split(" ")[1]
         
-        # Decode the JWT token
-        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-        user_id = payload['user_id']
+#         # Decode the JWT token
+#         payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+#         user_id = payload['user_id']
 
-        # You can now use user_id to fetch data from MongoDB if needed
-        user = mongo.db.users.find_one({'_id': ObjectId(user_id)})
-        if not user:
-            return jsonify({'message': 'User not found'}), 404
+#         # You can now use user_id to fetch data from MongoDB if needed
+#         user = mongo.db.users.find_one({'_id': ObjectId(user_id)})
+#         if not user:
+#             return jsonify({'message': 'User not found'}), 404
 
-        return jsonify({'message': 'Access granted', 'user': user['username']}), 200
+#         return jsonify({'message': 'Access granted', 'user': user['username']}), 200
 
-    except jwt.ExpiredSignatureError:
-        return jsonify({'message': 'Token expired'}), 401
-    except jwt.InvalidTokenError:
-        return jsonify({'message': 'Invalid token'}), 401
+#     except jwt.ExpiredSignatureError:
+#         return jsonify({'message': 'Token expired'}), 401
+#     except jwt.InvalidTokenError:
+#         return jsonify({'message': 'Invalid token'}), 401
 
 # Due to difference in tempreature.
 def get_completion(prompt):
