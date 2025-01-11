@@ -6,6 +6,16 @@ from groq import Groq
 import json
 import numpy as np
 from flask import Flask, request, jsonify
+import asyncio
+import threading
+import time
+
+def run_in_background(coro):
+    """Runs an asyncio coroutine in a background thread."""
+    start_time = time.time()
+    asyncio.run(coro)
+    end_time = time.time()
+    print("Task finished in the background thread.  -   " , end_time - start_time)
 
 
 # Initialize Flask app
@@ -196,7 +206,6 @@ def save_to_session(extracted_json, question, candidate_answer, session_file="ev
         # Save updated data back to the file
         with open(session_file, "w") as file:
             json.dump(session_data, file, indent=4)
-        print("Data saved successfully to", session_file)
 
     except Exception as e:
         print(f"Error saving to session: {e}")
@@ -284,7 +293,10 @@ def analyze_speech():
     transcription = str(transcribe_audio(wav_file))
       # Ensure transcription is a dictionary
     next_question = get_next_question(transcription , prev_question)
-    score = compute_results(prev_question,transcription)
+    
+    # Schedule compute_results to run in the background
+    thread = threading.Thread(target=run_in_background, args=(compute_results(prev_question, transcription),))
+    thread.start()
     
     try:
         # Load existing data
@@ -321,7 +333,7 @@ def extract_json(input_text):
     except Exception as e:
         return f"An error occurred: {e}"
 
-def compute_results(question, candidate_answer):
+async def compute_results(question, candidate_answer):
     delimiter = "###"
     
     guidelines_product=f"""
@@ -510,7 +522,6 @@ def compute_results(question, candidate_answer):
         save_to_session(extracted_json, question, candidate_answer)
     else:
         print("Invalid JSON extracted. Skipping save.")
-    print(extracted_json)
 
 if __name__ == '__main__':
     app.config['DEBUG'] = True
