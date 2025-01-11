@@ -171,7 +171,7 @@ def transcribe_audio(filename, model="distil-whisper-large-v3-en", prompt=None, 
 
 def get_next_question(transcribed_text , prev_question , domain):
     prompt = f"""
-    Based on the user's response to the previous question in this {domain} interview, generate a new follow-up question that shifts focus to a different yet relevant topic within the field. The next question should not repeat or overly revolve around the previous discussion but instead explore a fresh area that tests the candidate's breadth of knowledge in AI/ML. Ensure the question is challenging and opens up a different aspect of AI/ML, moving the conversation in a new direction while still maintaining relevance to the overall interview.
+    Based on the user's response to the previous question in this {domain} interview, generate a new follow-up question that shifts focus to a different yet relevant topic within the field. The next question should not repeat or overly revolve around the previous discussion but instead explore a fresh area that tests the candidate's breadth of knowledge in {domain}. Ensure the question is challenging and opens up a different aspect of {domain}, moving the conversation in a new direction while still maintaining relevance to the overall interview.
     Transcribed Text: "{transcribed_text}"
     Previous Question: "{prev_question}"
     Just give the next question without any other text
