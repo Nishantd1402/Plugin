@@ -1,4 +1,5 @@
 import os
+import re
 from flask import Flask, request, jsonify, render_template, redirect, url_for , Response
 from flask_cors import CORS
 from pydub import AudioSegment
@@ -167,7 +168,7 @@ def transcribe_audio(filename, model="distil-whisper-large-v3-en", prompt=None, 
             language=language,
             temperature=temperature,
         )
-    return transcription
+    return transcription.text
 
 def get_next_question(transcribed_text , prev_question , domain):
     prompt = f"""
@@ -231,12 +232,15 @@ def first_question():
     question = data[domain][num]
     return jsonify(question)
 
-@app.route('/results' , methods=['GET'])
+
+@app.route('/results' , methods=['POST'])
 def results():
     total_score = 0
     communication = 0
     problem_solving = 0
     skills = {}
+    
+    domain = request.form.get("domain" ,"")
     
     
     with open("evaluation_results.json" , "r") as f:
@@ -271,8 +275,10 @@ def results():
         skills[i] = round((skills[i] / 30) * 100 , 2)
     communication = skills["Communication Skills"]
     problem_solving = skills["Problem-Solving Ability"]
+    
+    observation = get_feedback()
 
-    return jsonify({"total_score" : average_score , "communication" : communication , "problem_solving" : problem_solving , "skills" : skills , "average_score" : average_score})
+    return jsonify({"total_score" : average_score , "communication" : communication , "problem_solving" : problem_solving , "skills" : skills , "average_score" : average_score , "observations" : observation})
 
 @app.route('/clear' , methods=['GET'])
 def clearData():
@@ -921,7 +927,7 @@ async def compute_results(question, candidate_answer , domaim):
         prompt = prompt_product
     if domaim == "Product-Manager":
         prompt = prompt_product
-    if domaim == "System-Design":
+    else:
         prompt = prompt_system
 
     # Generate completion
@@ -933,6 +939,38 @@ async def compute_results(question, candidate_answer , domaim):
     else:
         print("Invalid JSON extracted. Skipping save.")
         
+def get_feedback():
+    with open("conversation.json" , "r") as f:
+        data = json.load(f)
+    prompt = f"""
+        Generate a JSON object based on the interview conversation - {data}. The JSON should contain the following topics:
+
+Overall Summary: A concise summary of the candidate's performance during the interview, covering the major highlights, strengths, and any key observations.
+Feedback: Specific feedback on the candidate's responses, focusing on their strengths, weaknesses, and overall performance in various skills.
+Areas for Improvement: Identifying specific areas where the candidate needs to improve, such as technical skills, problem-solving abilities, communication, or other relevant factors.
+
+
+The output must follow following JSON structure:
+{{
+    "Overall Summary": "Brief summary here",
+    "Feedback": {{
+        "Strengths": "Strengths identified here",
+        "Weaknesses": "Weaknesses identified here"
+    }},
+    "Areas for Improvement": [
+        "Area for improvement 1",
+        "Area for improvement 2",
+        "Area for improvement 3"
+    ]
+}}
+    """
+    
+    result = get_completion(prompt)
+    pattern = r'```(.*?)```'
+
+        # Extract content using re.findall
+    matches = re.findall(pattern, result, re.DOTALL)
+    return json.loads(matches[0])
 
 
 if __name__ == '__main__':
