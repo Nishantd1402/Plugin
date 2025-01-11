@@ -233,15 +233,12 @@ def first_question():
     return jsonify(question)
 
 
-@app.route('/results' , methods=['POST'])
+@app.route('/results' , methods=['GET'])
 def results():
     total_score = 0
     communication = 0
     problem_solving = 0
-    skills = {}
-    
-    domain = request.form.get("domain" ,"")
-    
+    skills = {}    
     
     with open("evaluation_results.json" , "r") as f:
         data = json.load(f)
