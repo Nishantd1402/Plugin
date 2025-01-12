@@ -827,22 +827,6 @@ async def compute_results(question, candidate_answer , domaim):
                     iii) Feedback Example:
                         a) Level 10: “The candidate tackled system bottlenecks with creative solutions and backed them with sound reasoning.”
                         b) Level 5: “The problem-solving approach was adequate but lacked depth in addressing edge cases.”
-            7. *Coherence and Cohesion*
-                    i) *Key Focus:* Evaluate the logical flow, structure, and connection of ideas within the response.
-                    ii) *Scoring Process:*
-                        a) *Level 10:* Highly coherent; excellent flow between ideas. Logical progression of ideas with smooth transitions.
-                        b) *Level 9:* Very coherent; minor lapses in flow. Generally clear, with a few abrupt transitions.
-                        c) *Level 8:* Generally coherent; some choppy transitions. Ideas mostly flow well, but some sections feel disconnected.
-                        d) *Level 7:* Moderately coherent; noticeable breaks in flow. Some sections feel disconnected, requiring clarification.
-                        e) *Level 6:* Somewhat coherent; frequent breaks in flow. Readers may struggle to follow the progression of ideas.
-                        f) *Level 5:* Limited coherence; ideas often disjointed. Difficult to understand due to frequent breaks in logical progression.
-                        g) *Level 4:* Poor coherence; ideas rarely connected. Appears in random order, making the text confusing.
-                        h) *Level 3:* Very poor coherence; almost no logical flow. Text is a collection of unrelated ideas, challenging to follow.
-                        i) *Level 2:* Barely any coherence; incomprehensible flow. Text fails to form a cohesive narrative or argument.
-                        j) *Level 0:* No coherence; entirely disjointed. Text is a series of unrelated sentences with no discernible structure.
-                    iii) *Feedback Example:*
-                        a) Level 10: “The response followed a clear and logical structure, making it easy to follow.”
-                        b) Level 5: “The response was generally well-organized but had minor gaps in flow.”
         
         C] Output Expectations
             1. For each parameter:
@@ -905,11 +889,7 @@ async def compute_results(question, candidate_answer , domaim):
             "Coherence and Cohesion": {{
                 "score": "score (1-10)",
                 "feedback": "feedback specific to Coherence and Cohesion"
-            }},
-            "Trade-Off Analysis": {{
-                "score": "score (1-10)",
-                "feedback": "feedback specific to Trade-Off Analysis"
-            }}          
+            }}        
             }},
             "summary": {{
             "strengths": "highlight key strengths",
@@ -933,6 +913,7 @@ async def compute_results(question, candidate_answer , domaim):
     if isinstance(extracted_json, str) and "{" in extracted_json:
         # Save only if valid JSON is extracted
         save_to_session(extracted_json, question, candidate_answer)
+        print(extracted_json)
     else:
         print("Invalid JSON extracted. Skipping save.")
         
