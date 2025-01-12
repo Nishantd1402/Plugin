@@ -172,9 +172,18 @@ def transcribe_audio(filename, model="distil-whisper-large-v3-en", prompt=None, 
 
 def get_next_question(transcribed_text , prev_question , domain):
     prompt = f"""
-    Based on the user's response to the previous question in this {domain} interview, generate a new follow-up question that shifts focus to a different yet relevant topic within the field. The next question should not repeat or overly revolve around the previous discussion but instead explore a fresh area that tests the candidate's breadth of knowledge in AI/ML. Ensure the question is challenging and opens up a different aspect of AI/ML, moving the conversation in a new direction while still maintaining relevance to the overall interview.
-    Transcribed Text: "{transcribed_text}"
-    Previous Question: "{prev_question}"
+You are acting as an interviewer in the domain of {domain}. Your role is to ask the next relevant question based on the flow of the interview. You already have the transcribed text of the candidate's answer and the previous question. Use this information to ensure the conversation feels natural and progressive.
+
+  Inputs:
+  - Domain: ``{domain}```
+  - Previous Question: ```{prev_question}```
+  - Candidate's Answer: ```{transcribed_text}``
+
+  Instructions:
+  1. Analyze the previous question and the candidate's response to identify key topics or gaps that can be explored further.
+  2. Formulate a new question that naturally follows the discussion and delves deeper into the topic or transitions smoothly to another relevant topic in the domain.
+  3. The question should be open-ended and encourage the candidate to elaborate or demonstrate their expertise.
+
     Just give the next question without any other text
 """
     return get_completion(prompt)
@@ -387,22 +396,22 @@ async def compute_results(question, candidate_answer , domaim):
                     iii) *Feedback Example:*
                         a) Level 10: “The candidate explained the technical trade-offs of the feature with clarity and accuracy.”
                         b) Level 5: “The response was correct but lacked depth or technical details.”
-            2. *Market Understanding:*
-                    i) *Key Focus:* Evaluate the candidate’s ability to identify market trends, competitive landscape, and customer needs.
+            2. Data-Driven Decision Making:
+                    i) Key Focus: Assess the ability to analyze data, identify trends, and make informed decisions that align with organizational goals.
                     ii) *Scoring Process:*
-                        a) *Level 10:* Deeply understands market trends, customer behavior, and competitive landscape; consistently predicts shifts in the market.
-                        b) *Level 9:* Demonstrates advanced ability to analyze market data and identify emerging trends that guide product strategy.
-                        c) *Level 8:* Strong ability to evaluate market needs and leverage insights for effective product differentiation.
-                        d) *Level 7:* Proficient in understanding customer needs and competitive landscape but may require additional analysis for future trends.
-                        e) *Level 6:* Solid understanding of the market but lacks experience in identifying disruptive trends or emerging competition.
-                        f) *Level 5:* Basic awareness of market trends and customer needs, but limited ability to assess competitive dynamics.
-                        g) *Level 4:* Minimal understanding of market trends, relies heavily on external inputs for direction.
-                        h) *Level 3:* Limited market understanding, struggles to identify opportunities for product improvement based on market trends.
-                        i) *Level 2:* Very little awareness of the market, product decisions made without a clear grasp of external factors.
-                        j) *Level 0:* No meaningful understanding of the market or competitive landscape.
+                        a) *Level 10:* Exceptional ability to leverage data insights to influence strategic decisions and achieve measurable outcomes.
+                        b) *Level 9:* Proficient in designing data pipelines and integrating advanced analytics into decision-making processes.
+                        c) *Level 8:* Strong skills in interpreting complex datasets and aligning findings with business objectives.
+                        d) *Level 7:* Effectively uses data tools to inform decisions and assess performance metrics regularly.
+                        e) *Level 6:* Can apply data analysis techniques to solve common challenges and support decision-making.
+                        f) *Level 5:* Adequate understanding of basic data tools, though interpretation may lack depth.
+                        g) *Level 4:* Limited ability to independently derive actionable insights from data.
+                        h) *Level 3:* Relies heavily on others to interpret data for decision-making.
+                        i) *Level 2:* Basic understanding of data concepts but struggles to apply them effectively.
+                        j) *Level 0:* Minimal to no engagement with data when making decisions.
                     iii) *Feedback Example:*
-                        a) Level 10: “The candidate effectively analyzed the market, identifying a key gap in competitors' offerings.”
-                        b) Level 5: “The response mentioned general trends but missed actionable insights.”
+                        a) Level 10: “The candidate provided detailed insights using data, linking findings directly to strategic outcomes.”
+                        b) Level 5: “Demonstrated an understanding of data tools but struggled to translate findings into actionable decisions.”
             3. *Problem-Solving Ability:*
                     i) *Key Focus:* Assess the candidate’s ability to identify issues, propose solutions, and anticipate challenges.
                     ii) *Scoring Process:*
@@ -435,38 +444,38 @@ async def compute_results(question, candidate_answer , domaim):
                     iii) *Feedback Example:*
                         a) Level 8: “The explanation of overfitting was clear but lacked examples.”
                         b) Level 3: “The response was disorganized and difficult to follow.”
-            5. *Leadership & Collaboration*
-                    i) *Key Focus:* Assess the candidate’s ability to lead teams, manage conflicts, and align diverse stakeholders.
+            5. User-Centric Design and Customer Empathy
+                    i) *Key Focus:* Assess understanding of user needs, ability to design user-friendly solutions, and empathy toward customer experiences.
                     ii) *Scoring Process:*
-                        a) *Level 10:* Inspires teams, creates a vision for success, drives cross-functional collaboration, and influences organizational culture.
-                        b) *Level 9:* Demonstrates exceptional leadership in driving alignment, resolving conflicts, and maintaining motivation across teams.
-                        c) *Level 8:* Effectively leads teams and maintains alignment across multiple stakeholders and departments.
-                        d) *Level 7:* Strong leadership skills, able to manage teams effectively and resolve conflicts, ensuring smooth project execution.
-                        e) *Level 6:* Good leader but occasionally struggles to keep teams aligned or handle interpersonal conflicts effectively.
-                        f) *Level 5:* Solid collaborator but may require guidance in motivating teams or resolving conflicts in a timely manner.
-                        g) *Level 4:* Limited leadership experience, often relies on others to lead or provide direction in team settings.
-                        h) *Level 3:* Struggles with leading teams and fostering collaboration across departments.
-                        i) *Level 2:* Rarely takes a leadership role, lacks experience in leading teams or motivating others.
-                        j) *Level 0:*  Does not demonstrate leadership abilities; struggles to engage or direct teams in any capacity.
+                        a) *Level 10:* Consistently integrates deep user insights into design decisions, resulting in highly impactful and user-friendly solutions.
+                        b) *Level 9:* Demonstrates exceptional empathy and can lead user research initiatives to refine product experiences.
+                        c) *Level 8:* Strong understanding of user personas and consistently aligns design decisions with customer feedback.
+                        d) *Level 7:* Effectively translates user insights into actionable design changes that improve usability.
+                        e) *Level 6:* Shows a good understanding of user needs but may require guidance to fully incorporate feedback into designs.
+                        f) *Level 5:* Understands basic principles of user-centered design but lacks depth in applying them consistently.
+                        g) *Level 4:* Limited empathy for user challenges, often prioritizing technical solutions over user experience.
+                        h) *Level 3:* Relies heavily on others for user research and design validation.
+                        i) *Level 2:* Basic understanding of user-centric concepts but struggles to apply them effectively.
+                        j) *Level 0:* Little to no focus on user needs in design or decision-making.
                     iii) *Feedback Example:*
-                        a) Level 10: “The candidate outlined a clear plan for aligning stakeholders and ensuring team buy-in.”
-                        b) Level 5: “The response mentioned collaboration but lacked conflict resolution strategies.”
-            6. *Coherence and Cohesion*
-                    i) *Key Focus:*  Evaluate the logical flow, structure, and connection of ideas within the response.
+                        a) Level 10:  “The candidate demonstrated a deep understanding of the user journey and made impactful, customer-focused suggestions.”
+                        b) Level 5:  “Understood the importance of user needs but struggled to translate them into effective design changes.”
+            6. Strategic Thinking and Roadmap Planning
+                    i) *Key Focus:*  Assess the ability to think strategically, align goals with broader organizational objectives, and create actionable roadmaps that balance short-term and long-term priorities.
                     ii) *Scoring Process:*
-                        a) *Level 10:* Highly coherent; excellent flow between ideas. Logical progression of ideas with smooth transitions.
-                        b) *Level 9:* Very coherent; minor lapses in flow. Generally clear, with a few abrupt transitions.
-                        c) *Level 8:* Generally coherent; some choppy transitions. Ideas mostly flow well, but some sections feel disconnected.
-                        d) *Level 7:* Moderately coherent; noticeable breaks in flow. Some sections feel disconnected, requiring clarification.
-                        e) *Level 6:* Somewhat coherent; frequent breaks in flow. Readers may struggle to follow the progression of ideas.
-                        f) *Level 5:* Limited coherence; ideas often disjointed. Difficult to understand due to frequent breaks in logical progression.
-                        g) *Level 4:* Poor coherence; ideas rarely connected. Appears in random order, making the text confusing.
-                        h) *Level 3:* Very poor coherence; almost no logical flow. Text is a collection of unrelated ideas, challenging to follow.
-                        i) *Level 2:* Barely any coherence; incomprehensible flow. Text fails to form a cohesive narrative or argument.
-                        j) *Level 0:* No coherence; entirely disjointed. Text is a series of unrelated sentences with no discernible structure.
+                        a) *Level 10:* Demonstrates exceptional strategic vision, foreseeing long-term trends and their implications, and creating roadmaps that align perfectly with organizational goals and market demands.
+                        b) *Level 9:* Expertly aligns strategic objectives with operational execution, effectively balancing innovative goals with realistic planning for cross-functional teams.
+                        c) *Level 8:* Strong strategic thinker who can identify key opportunities and risks, creating roadmaps that address both short-term and long-term needs with minimal input.
+                        d) *Level 7:* Proficient in identifying priorities, setting milestones, and communicating the strategic value of decisions to stakeholders effectively.
+                        e) *Level 6:* Capable of creating actionable roadmaps that balance immediate deliverables with broader strategic goals.
+                        f) *Level 5:* Understands strategic goals and can create a roadmap with guidance, but struggles to balance competing priorities independently.
+                        g) *Level 4:* Has basic knowledge of roadmap planning but struggles to integrate strategic thinking into actionable plans.
+                        h) *Level 3:* Limited ability to think beyond immediate tasks, resulting in roadmaps that lack alignment with broader goals.
+                        i) *Level 2:* Struggles with roadmap planning, often failing to incorporate strategic alignment or anticipate future needs.
+                        j) *Level 0:* Lacks understanding of strategic thinking and roadmap planning, unable to contribute meaningfully to these processes.
                     iii) *Feedback Example:*
-                        a) Level 10: “The response followed a clear and logical structure, making it easy to follow.”
-                        b) Level 5: “The response was generally well-organized but had minor gaps in flow.”
+                        a) Level 10: "The candidate demonstrated a clear vision, providing a roadmap that anticipates future trends while addressing current challenges."
+                        b) Level 5: "The roadmap addressed immediate priorities but lacked integration with long-term objectives."
         
         C] Output Expectations
             1. For each parameter:
@@ -509,9 +518,9 @@ async def compute_results(question, candidate_answer , domaim):
                 "score": "score (1-10)",
                 "feedback": "feedback specific to technical knowledge"
             }},
-            "Market Understanding": {{
+            "Data-Driven Decision Making": {{
                 "score": "score (1-10)",
-                "feedback": "feedback specific to Market Understanding"
+                "feedback": "feedback specific to Data-Driven Decision Making"
             }},
             "Problem-Solving Ability": {{
                 "score": "score (1-10)",
@@ -521,13 +530,13 @@ async def compute_results(question, candidate_answer , domaim):
                 "score": "score (1-10)",
                 "feedback": "feedback specific to communication skills"
             }},
-            "Leadership & Collaboration": {{
+            "User-Centric Design and Customer Empathy": {{
                 "score": "score (1-10)",
-                "feedback": "feedback specific to Leadership & Collaboration"
+                "feedback": "feedback specific to User-Centric Design and Customer Empathy"
             }},
-            "Coherence and Cohesion": {{
+            "Strategic Thinking and Roadmap Planning": {{
                 "score": "score (1-10)",
-                "feedback": "feedback specific to Coherence and Cohesion"
+                "feedback": "feedback specific to Strategic Thinking and Roadmap Planning"
             }}
             }},
             "summary": {{
