@@ -886,7 +886,7 @@ async def compute_results(question, candidate_answer , domaim):
                 "score": "score (1-10)",
                 "feedback": "feedback specific to Distributed Systems Knowledge"
             }},
-            "Coherence and Cohesion": {{
+            "Trade-Off Analysis": {{
                 "score": "score (1-10)",
                 "feedback": "feedback specific to Coherence and Cohesion"
             }}        
