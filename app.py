@@ -120,7 +120,7 @@ app.config['UPLOAD_FOLDER'] = './uploads'
 # Due to difference in tempreature.
 def get_completion(prompt):
     try:
-            client = Groq(api_key="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")
+            client = Groq(api_key="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")
             # Generate the completion using the OpenAI client
             chat_completion = client.chat.completions.create(
                 messages=[
@@ -136,7 +136,7 @@ def get_completion(prompt):
     
 def get_completion_0(prompt):
     try:
-            client = Groq(api_key="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")
+            client = Groq(api_key="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")
             # Generate the completion using the OpenAI client
             chat_completion = client.chat.completions.create(
                 messages=[
