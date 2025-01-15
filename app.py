@@ -276,6 +276,8 @@ def results():
     
     with open("evaluation_results.json" , "r") as f:
         data = json.load(f)
+    with open("conversation.json" , "r") as file:
+        conversation = json.load(file)
     
     # Process each evaluation text and extract the relevant values
     for score_text in data["Score"]:
@@ -309,8 +311,7 @@ def results():
     
     observation = get_feedback()
 
-    return jsonify({"total_score" : average_score , "communication" : communication , "problem_solving" : problem_solving , "skills" : skills , "average_score" : average_score , "observations" : observation})
-
+    return jsonify({"Conversation" : conversation , "total_score" : average_score , "communication" : communication , "problem_solving" : problem_solving , "skills" : skills , "average_score" : average_score , "observations" : observation})
 @app.route('/clear' , methods=['GET'])
 def clearData():
     with open("evaluation_results.json" , "w") as f:
