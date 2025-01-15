@@ -1,3 +1,5 @@
+import datetime
+from functools import wraps
 import os
 import re
 from flask import Flask, request, jsonify, render_template, redirect, url_for , Response
@@ -10,6 +12,20 @@ from flask import Flask, request, jsonify
 import asyncio
 import threading
 import time
+import pyrebase
+import jwt
+
+firebase_config = {
+    "apiKey": "AIzaSyDOATL4y6-b9wuWm7JU1OKkPure4UzzaCE",
+    "authDomain": "intervu-5290f.firebaseapp.com",
+    "databaseURL": "https://intervu-5290f-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "projectId": "intervu-5290f",
+    "storageBucket": "intervu-5290f.firebasestorage.app",
+    "messagingSenderId": "4503173642",
+    "appId": "1:4503173642:web:3160eb96532087166a3df3",
+    "measurementId": "G-M9JMDS9X0J"
+  }
+
 
 def run_in_background(coro):
     """Runs an asyncio coroutine in a background thread."""
@@ -23,104 +39,109 @@ def run_in_background(coro):
 app = Flask(__name__)
 CORS(app)
 app.config['UPLOAD_FOLDER'] = './uploads'
-# app.config["MONGO_URI"] = "mongodb+srv://jainmitesh2393:rWCYwbKfmqfHo1Xx@cluster0.embny.mongodb.net/twitter?retryWrites=true&w=majority&appName=Cluster0"  # Change this to your MongoDB URI
-# app.config["SECRET_KEY"] = "your_secret_key"  # Use a strong secret key
-# mongo = PyMongo(app)
+firebase = pyrebase.initialize_app(firebase_config)
+auth = firebase.auth()
+db = firebase.database()
+app.config['SECRET_KEY'] = 'your-very-secret-key-here'
 
-# SESSION_FILE = "evaluation_results.json"
 
-# # Helper function to generate JWT token
-# def generate_token(user_id):
-#     payload = {
-#         'user_id': str(user_id),
-#         'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)  # Token expires in 1 hour
-#     }
-#     token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
-#     return token
+# Generate JWT Token
+def generate_token(user_id):
+    payload = {
+        'user_id': user_id,
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)  # Expiry in 1 hour
+    }
+    token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
+    return token
 
-# # Signup endpoint
-# @app.route('/signup', methods=['POST'])
-# def signup():
-#     data = request.get_json()
-#     username = data.get('username')
-#     password = data.get('password')
+users_db = {
+    "user1": {"password": "123", "name": "123"}
+}
 
-#     if not username or not password:
-#         return jsonify({'message': 'Username and password are required'}), 400
-
-#     # Check if user already exists
-#     existing_user = mongo.db.users.find_one({'username': username})
-#     if existing_user:
-#         return jsonify({'message': 'Username already exists'}), 400
-
-#     # Hash the password before storing it
-#     hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-
-#     # Save user to MongoDB
-#     user = {
-#         'username': username,
-#         'password': hashed_password
-#     }
-#     result = mongo.db.users.insert_one(user)
-
-#     return jsonify({'message': 'User created successfully'}), 201
-
-# # Login endpoint
-# @app.route('/login', methods=['POST'])
-# def login():
-#     data = request.get_json()
-#     username = data.get('username')
-#     password = data.get('password')
-
-#     if not username or not password:
-#         return jsonify({'message': 'Username and password are required'}), 400
-
-#     # Check if user exists
-#     user = mongo.db.users.find_one({'username': username})
-#     if not user:
-#         return jsonify({'message': 'User not found'}), 404
-
-#     # Check if password is correct
-#     if not bcrypt.checkpw(password.encode('utf-8'), user['password']):
-#         return jsonify({'message': 'Invalid password'}), 401
-
-#     # Generate JWT token
-#     token = generate_token(user['_id'])
+def verify_token(token):
+    try:
+        # Decode the token using the secret key
+        payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+        return payload  # Return payload if token is valid
+    except jwt.ExpiredSignatureError:
+        return None  # Token has expired
+    except jwt.InvalidTokenError:
+        return None  # Token is invalid
     
-#     return jsonify({'message': 'Login successful', 'token': token}), 200
+def token_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = None
 
-# # Protected route to demonstrate token validation
-# @app.route('/protected', methods=['GET'])
-# def protected():
-#     token = request.headers.get('Authorization')
+        # Check if token is passed in the Authorization header
+        if 'Authorization' in request.headers:
+            token = request.headers['Authorization'].split(" ")[1]  # Get the token part (after "Bearer ")
 
-#     if not token:
-#         return jsonify({'message': 'Token is missing'}), 401
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 401
 
-#     try:
-#         # Remove 'Bearer ' from token if included
-#         token = token.split(" ")[1]
+        # Verify the token
+        payload = verify_token(token)
+        if not payload:
+            return jsonify({'message': 'Invalid or expired token!'}), 401
+
+        # Add the user_id to the request context for use in the route
+        request.user_id = payload['user_id']
         
-#         # Decode the JWT token
-#         payload = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-#         user_id = payload['user_id']
+        return f(*args, **kwargs)
 
-#         # You can now use user_id to fetch data from MongoDB if needed
-#         user = mongo.db.users.find_one({'_id': ObjectId(user_id)})
-#         if not user:
-#             return jsonify({'message': 'User not found'}), 404
+    return decorated_function
 
-#         return jsonify({'message': 'Access granted', 'user': user['username']}), 200
+@app.route('/db' , methods=['GET'])
+@token_required
+def hello():
+    return "OK"
 
-#     except jwt.ExpiredSignatureError:
-#         return jsonify({'message': 'Token expired'}), 401
-#     except jwt.InvalidTokenError:
-#         return jsonify({'message': 'Invalid token'}), 401
+@app.route('/login', methods=['POST'])
+def login():
+    email = request.form.get('email')
+    password = request.form.get('password')
+    
+    # Fetch user from database based on email
+    user = db.child("users").order_by_child("email").equal_to(email).get()
+    
+    if not user.val():
+        return jsonify({'message': 'User not found!'}), 404
 
-# Due to difference in tempreature.
+    # Check if the password matches
+    user_data = list(user.val().values())[0]  # Get the user data (since it's returned as a dictionary)
+    
+    if user_data['password'] == password:  # In a real app, hash the password and compare hashes
+        token = generate_token(email)  # Generate JWT token using email as the identifier
+        return jsonify({'token': token}), 200
+    
+    return jsonify({'message': 'Invalid credentials'}), 401
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    # Get the email and password from the request
+    email = request.form.get('email')
+    password = request.form.get('password')
+    
+    # Check if the email already exists
+    existing_user = db.child("users").order_by_child("email").equal_to(email).get()
+    
+    if existing_user.val():
+        return jsonify({'message': 'User with this email already exists!'}), 400
+
+    # Add user to the database if the email doesn't exist
+    user_data = {
+        'email': email,
+        'password': password  # You should hash the password before saving it in a real-world app
+    }
+    
+    db.child("users").push(user_data)
+    
+    return jsonify({'message': 'User created successfully!'}), 201
+
 def get_completion(prompt):
     try:
-            client = Groq(api_key="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")
+            client = Groq(api_key="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")
             # Generate the completion using the OpenAI client
             chat_completion = client.chat.completions.create(
                 messages=[
@@ -136,7 +157,7 @@ def get_completion(prompt):
     
 def get_completion_0(prompt):
     try:
-            client = Groq(api_key="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")
+            client = Groq(api_key="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")
             # Generate the completion using the OpenAI client
             chat_completion = client.chat.completions.create(
                 messages=[
@@ -225,7 +246,11 @@ def save_to_session(extracted_json, question, candidate_answer, session_file="ev
         print(f"Error saving to session: {e}")
 
 
-
+@app.route('/dbtest')
+def dbtest():
+    data = {"name": "Mishat", "age": 30}
+    db.child("users").push(data)
+    return "ok"
 # Route: Home Page
 @app.route('/')
 def index():
@@ -251,8 +276,6 @@ def results():
     
     with open("evaluation_results.json" , "r") as f:
         data = json.load(f)
-    with open("conversation.json" , "r") as file:
-        conversation = json.load(file)
     
     # Process each evaluation text and extract the relevant values
     for score_text in data["Score"]:
@@ -286,7 +309,7 @@ def results():
     
     observation = get_feedback()
 
-    return jsonify({"Conversation" : conversation , "total_score" : average_score , "communication" : communication , "problem_solving" : problem_solving , "skills" : skills , "average_score" : average_score , "observations" : observation})
+    return jsonify({"total_score" : average_score , "communication" : communication , "problem_solving" : problem_solving , "skills" : skills , "average_score" : average_score , "observations" : observation})
 
 @app.route('/clear' , methods=['GET'])
 def clearData():
@@ -318,12 +341,12 @@ def analyze_speech():
     audio_path = os.path.join(app.config['UPLOAD_FOLDER'], audio_file.filename)
     audio_file.save(audio_path)
 
-    mp3_file = convert_webm_to_mp3(audio_path)
-    # Convert to WAV
-    wav_file = convert_to_wav(mp3_file)
+    # mp3_file = convert_webm_to_mp3(audio_path)
+    # # Convert to WAV
+    # wav_file = convert_to_wav(mp3_file)
 
     # Step 1: Transcribe audio
-    transcription = str(transcribe_audio(wav_file))
+    transcription = str(transcribe_audio(audio_path))
       # Ensure transcription is a dictionary
     next_question = get_next_question(transcription , prev_question , domain)
     
