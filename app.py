@@ -939,7 +939,7 @@ async def compute_results(question, candidate_answer , domaim):
         prompt = prompt_aiml
     if domaim == "Product-Manager":
         prompt = prompt_product
-    else:
+    if domain == "System-Design":
         prompt = prompt_system
 
     # Generate completion
