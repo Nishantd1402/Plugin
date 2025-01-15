@@ -392,7 +392,7 @@ def extract_json(input_text):
     except Exception as e:
         return f"An error occurred: {e}"
 
-async def compute_results(question, candidate_answer , domaim):
+async def compute_results(question, candidate_answer , domain):
     
     delimiter = "###"
             
@@ -935,9 +935,9 @@ async def compute_results(question, candidate_answer , domaim):
         }}
         """
     
-    if domaim == "AI-ML":
+    if domain == "AI-ML":
         prompt = prompt_aiml
-    if domaim == "Product-Manager":
+    if domain == "Product-Manager":
         prompt = prompt_product
     if domain == "System-Design":
         prompt = prompt_system
