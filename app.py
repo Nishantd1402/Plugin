@@ -54,10 +54,6 @@ def generate_token(user_id):
     token = jwt.encode(payload, app.config['SECRET_KEY'], algorithm='HS256')
     return token
 
-users_db = {
-    "user1": {"password": "123", "name": "123"}
-}
-
 def verify_token(token):
     try:
         # Decode the token using the secret key
@@ -92,10 +88,10 @@ def token_required(f):
 
     return decorated_function
 
-@app.route('/db' , methods=['GET'])
+@app.route('/getUser' , methods=['GET'])
 @token_required
-def hello():
-    return "OK"
+def getUser():
+    return request.user_id
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -110,7 +106,6 @@ def login():
 
     # Check if the password matches
     user_data = list(user.val().values())[0]  # Get the user data (since it's returned as a dictionary)
-    
     if user_data['password'] == password:  # In a real app, hash the password and compare hashes
         token = generate_token(email)  # Generate JWT token using email as the identifier
         return jsonify({'token': token}), 200
@@ -336,6 +331,7 @@ def analyze_speech():
     audio_file = request.files['audio']
     prev_question = request.form.get("previous","")
     domain = request.form.get("domain" , "")
+    
     # Save audio locally
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
         os.makedirs(app.config['UPLOAD_FOLDER'])
@@ -935,8 +931,10 @@ async def compute_results(question, candidate_answer , domain):
         }}
         """
     
+    
     if domain == "AI-ML":
         prompt = prompt_aiml
+        print(domain)
     if domain == "Product-Manager":
         prompt = prompt_product
     if domain == "System-Design":
@@ -989,4 +987,3 @@ The output must follow following JSON structure:
 if __name__ == '__main__':
     app.config['DEBUG'] = True
     app.run()
-
