@@ -193,19 +193,19 @@ def transcribe_audio(filename, model="distil-whisper-large-v3-en", prompt=None, 
 
 def get_next_question(transcribed_text , prev_question , domain):
     prompt = f"""
-You are acting as an interviewer in the domain of {domain}. Your role is to ask the next relevant question based on the flow of the interview. You already have the transcribed text of the candidate's answer and the previous question. Use this information to ensure the conversation feels natural and progressive.
+You are an interviewer in the domain of {domain}. Your role is to continue a natural and progressive conversation with the candidate. Use the previous question and the candidate's response to guide the discussion. If the candidate asks a question, provide a hint and follow up with another question to keep the conversation flowing.
 
-  Inputs:
-  - Domain: ``{domain}```
-  - Previous Question: ```{prev_question}```
-  - Candidate's Answer: ```{transcribed_text}``
+Inputs:
+- Domain: "{domain}"
+- Previous Question: "{prev_question}"
+- Candidate's Answer: "{transcribed_text}"
 
-  Instructions:
-  1. Analyze the previous question and the candidate's response to identify key topics or gaps that can be explored further.
-  2. Formulate a new question that naturally follows the discussion and delves deeper into the topic or transitions smoothly to another relevant topic in the domain.
-  3. The question should be open-ended and encourage the candidate to elaborate or demonstrate their expertise.
+Instructions:
+1. Analyze the previous question and the candidate's response to identify key topics or any areas that could be explored further.
+2. Formulate a new open-ended question that builds on the discussion, encourages elaboration, or transitions smoothly to another relevant topic in the domain.
+3. If the candidate asks a question, offer a brief hint instead of a full answer and ask a follow-up question to maintain the conversational flow.
 
-    Just give the next question without any other text
+Provide the next question in a conversational tone without any additional text.
 """
     return get_completion(prompt)
 
